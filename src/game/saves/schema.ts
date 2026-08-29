@@ -12,6 +12,12 @@ export interface SaveDataV1 {
     readonly lifeLevel: number;
     readonly experience: number;
   };
+  readonly resources: {
+    readonly life: number;
+    readonly maxLife: number;
+    readonly magic: number;
+    readonly maxMagic: number;
+  };
   readonly techniques: readonly string[];
   readonly spells: readonly string[];
   readonly relics: readonly string[];
@@ -27,6 +33,7 @@ export function createNewSave(activeTeamId: TeamId): SaveDataV1 {
     activeTeamId,
     checkpointId: 'rockaway_blue_hole',
     stats: { attackLevel: 1, magicLevel: 1, lifeLevel: 1, experience: 0 },
+    resources: { life: 6, maxLife: 6, magic: 4, maxMagic: 4 },
     techniques: [],
     spells: [],
     relics: [],
@@ -44,6 +51,7 @@ export function isSaveData(value: unknown): value is SaveData {
     typeof candidate.checkpointId === 'string' &&
     typeof candidate.savedAt === 'string' &&
     typeof candidate.stats === 'object' &&
+    typeof candidate.resources === 'object' &&
     Array.isArray(candidate.techniques) &&
     Array.isArray(candidate.spells) &&
     Array.isArray(candidate.relics)
