@@ -61,6 +61,14 @@ export class Highway26Scene extends Phaser.Scene {
       return;
     }
 
+    if (
+      this.routeIndex === ROUTE.length - 1 &&
+      this.controls.actions.get('confirm').pressed
+    ) {
+      this.scene.start('foundry-test');
+      return;
+    }
+
     const advancing =
       (this.controls.actions.get('right').pressed ||
         this.controls.actions.get('up').pressed ||
@@ -198,7 +206,7 @@ export class Highway26Scene extends Phaser.Scene {
     if (this.routeIndex === 0) {
       this.locationText.setText('ROCKAWAY BEACH • ESC TO RETURN HOME');
     } else if (this.routeIndex === ROUTE.length - 1) {
-      this.locationText.setText('HILLSBORO WEST REACHED • PALACE COMING NEXT');
+      this.locationText.setText('HILLSBORO WEST • ENTER / A: ENTER FOUNDRY');
     } else {
       this.locationText.setText(`${point.label} • KEEP TRAVELING EAST`);
     }
