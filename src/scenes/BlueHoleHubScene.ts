@@ -4,6 +4,7 @@ import { PhaserInput } from '../game/input/PhaserInput';
 import { recoveredRelicCount, RELIC_IDS } from '../game/progression/relics';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
+import { TouchControls } from '../ui/TouchControls';
 
 const PLAYER_SPEED = 58;
 const INTERACTION_DISTANCE = 31;
@@ -43,6 +44,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
 
     this.drawRoom();
     this.controls = new PhaserInput(this);
+    new TouchControls(this, this.controls);
     this.createPlayer();
     this.createInterface();
     this.refreshHud();
