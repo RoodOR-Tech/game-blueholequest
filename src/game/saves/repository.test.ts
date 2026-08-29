@@ -31,5 +31,20 @@ describe('SaveRepository', () => {
     storage.setItem('blue-hole-quest:save', '{not-json');
     expect(new SaveRepository(storage).load()).toBeNull();
   });
+
+  it('preserves current and maximum resources', () => {
+    const repository = new SaveRepository(new MemoryStorage());
+    const save = createNewSave('dad_paula');
+    repository.save({
+      ...save,
+      resources: { ...save.resources, life: 2, magic: 1 },
+    });
+    expect(repository.load()?.resources).toEqual({
+      life: 2,
+      maxLife: 6,
+      magic: 1,
+      maxMagic: 4,
+    });
+  });
 });
 
