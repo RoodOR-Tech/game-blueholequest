@@ -1,4 +1,4 @@
-import { isSaveData, type SaveData } from './schema';
+import { normalizeSaveData, type SaveData } from './schema';
 
 export const SAVE_KEY = 'blue-hole-quest:save';
 
@@ -17,7 +17,7 @@ export class SaveRepository {
 
     try {
       const parsed: unknown = JSON.parse(serialized);
-      return isSaveData(parsed) ? parsed : null;
+      return normalizeSaveData(parsed);
     } catch {
       return null;
     }
