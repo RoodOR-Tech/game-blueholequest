@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
+import { awardFoundryVictory } from '../game/combat/foundryReward';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { SaveRepository } from '../game/saves/repository';
+import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
 
 const MOVE_SPEED = 78;
@@ -10,6 +12,11 @@ const JUMP_SPEED = 155;
 const COYOTE_MS = 100;
 const JUMP_BUFFER_MS = 120;
 const ATTACK_COOLDOWN_MS = 260;
+const DRONE_SPEED = 24;
+const DRONE_CHARGE_SPEED = 92;
+const DRONE_WINDUP_MS = 420;
+const DRONE_ATTACK_COOLDOWN_MS = 1350;
+const PLAYER_INVULNERABLE_MS = 900;
 
 export class FoundryTestScene extends Phaser.Scene {
   private controls?: PhaserInput;
@@ -17,12 +24,19 @@ export class FoundryTestScene extends Phaser.Scene {
   private drone?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private message?: Phaser.GameObjects.Text;
   private healthText?: Phaser.GameObjects.Text;
+  private playerHealthText?: Phaser.GameObjects.Text;
+  private save?: SaveData;
   private droneHealth: HealthState = { current: 3, maximum: 3 };
   private facing: -1 | 1 = 1;
   private lastGroundedAt = 0;
   private jumpBufferedUntil = 0;
   private nextAttackAt = 0;
   private attackingUntil = 0;
+  private nextDroneAttackAt = 900;
+  private droneChargingUntil = 0;
+  private playerInvulnerableUntil = 0;
+  private combatOver = false;
+  private retreatingHome = false;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -30,16 +44,17 @@ export class FoundryTestScene extends Phaser.Scene {
   }
 
   create(): void {
-    const save = this.repository.load();
-    if (!save) {
+    this.save = this.repository.load() ?? undefined;
+    if (!this.save) {
       this.scene.start('team-select');
       return;
     }
-    this.repository.save({
-      ...save,
+    this.save = {
+      ...this.save,
       checkpointId: 'hillsboro_west_foundry_entry',
       savedAt: new Date().toISOString(),
-    });
+    };
+    this.repository.save(this.save);
 
     this.drawRoom();
     this.createTextures();
@@ -84,7 +99,13 @@ export class FoundryTestScene extends Phaser.Scene {
       fontFamily: 'monospace',
       fontSize: '6px',
     });
+    this.playerHealthText = this.add.text(7, 34, '', {
+      color: '#8fe3ff',
+      fontFamily: 'monospace',
+      fontSize: '7px',
+    });
     this.refreshDroneHealth();
+    this.refreshPlayerHealth();
 
     this.add
       .text(230, 9, 'HOME', {
@@ -100,8 +121,18 @@ export class FoundryTestScene extends Phaser.Scene {
   }
 
   update(time: number): void {
-    if (!this.controls || !this.player) return;
+    if (!this.controls || !this.player || !this.save) return;
     this.controls.update(this.input.gamepad?.getPad(0));
+
+    if (this.combatOver) {
+      this.player.setVelocityX(0).play('dad-idle', true);
+      if (
+        this.controls.actions.get('confirm').pressed ||
+        this.controls.actions.get('cancel').pressed
+      )
+        this.scene.start(this.retreatingHome ? 'blue-hole-hub' : 'highway-26');
+      return;
+    }
 
     const horizontal =
       Number(this.controls.actions.get('right').down) -
@@ -134,8 +165,77 @@ export class FoundryTestScene extends Phaser.Scene {
       if (!this.player.body.blocked.down) this.player.setFrame('dad-jump');
       else this.player.play(horizontal === 0 ? 'dad-idle' : 'dad-walk', true);
     }
+    this.updateDrone(time);
     if (this.controls.actions.get('cancel').pressed)
       this.scene.start('highway-26');
+  }
+
+  private updateDrone(time: number): void {
+    if (!this.drone?.active || !this.player || !this.save) return;
+    const distance = this.player.x - this.drone.x;
+
+    if (time < this.droneChargingUntil) {
+      if (Math.abs(distance) < 17 && time >= this.playerInvulnerableUntil)
+        this.damagePlayer(time, Math.sign(distance) || 1);
+      return;
+    }
+
+    if (this.droneChargingUntil > 0) {
+      this.droneChargingUntil = 0;
+      this.drone.setVelocityX(0).clearTint();
+      this.nextDroneAttackAt = time + DRONE_ATTACK_COOLDOWN_MS;
+    }
+
+    if (time >= this.nextDroneAttackAt && Math.abs(distance) < 82) {
+      this.nextDroneAttackAt = Number.POSITIVE_INFINITY;
+      this.drone.setVelocityX(0).setTint(0xff6b55);
+      this.message?.setText('DRONE LOCKED ON • JUMP OR MOVE!');
+      this.time.delayedCall(DRONE_WINDUP_MS, () => {
+        if (!this.drone?.active || !this.player) return;
+        const direction = this.player.x < this.drone.x ? -1 : 1;
+        this.drone
+          .setTint(0xffd36a)
+          .setVelocityX(direction * DRONE_CHARGE_SPEED);
+        this.droneChargingUntil = this.time.now + 520;
+      });
+      return;
+    }
+
+    if (Number.isFinite(this.nextDroneAttackAt))
+      this.drone.setVelocityX(Math.sign(distance) * DRONE_SPEED);
+  }
+
+  private damagePlayer(time: number, knockbackDirection: number): void {
+    if (!this.player || !this.save) return;
+    this.playerInvulnerableUntil = time + PLAYER_INVULNERABLE_MS;
+    const result = applyDamage(
+      {
+        current: this.save.resources.life,
+        maximum: this.save.resources.maxLife,
+      },
+      1,
+    );
+    this.save = {
+      ...this.save,
+      resources: { ...this.save.resources, life: result.health.current },
+      savedAt: new Date().toISOString(),
+    };
+    this.repository.save(this.save);
+    this.player.setVelocity(knockbackDirection * 92, -92).setTintFill(0xff6b55);
+    this.cameras.main.shake(110, 0.006);
+    this.time.delayedCall(180, () => this.player?.clearTint());
+    this.refreshPlayerHealth();
+
+    if (result.defeated) {
+      this.combatOver = true;
+      this.retreatingHome = true;
+      this.drone?.setVelocityX(0);
+      this.message?.setText('DAD IS DOWN • ENTER / A: RETREAT HOME');
+    } else {
+      this.message?.setText(
+        `DRONE HIT • ${result.health.current} LIFE REMAINS`,
+      );
+    }
   }
 
   private attack(time: number): void {
@@ -180,11 +280,25 @@ export class FoundryTestScene extends Phaser.Scene {
     this.time.delayedCall(70, () => this.drone?.clearTint());
     if (result.defeated) {
       this.drone.destroy();
-      this.message?.setText('DRONE DEFEATED • WRENCH COMBAT ONLINE');
+      this.completeVictory();
       this.healthText?.setText('');
     } else {
       this.refreshDroneHealth();
     }
+  }
+
+  private completeVictory(): void {
+    if (!this.save) return;
+    const reward = awardFoundryVictory(this.save, new Date().toISOString());
+    const firstVictory = reward.firstVictory;
+    this.save = reward.save;
+    this.repository.save(this.save);
+    this.combatOver = true;
+    this.message?.setText(
+      firstVictory
+        ? 'VICTORY • POWER WRENCH LEARNED • +100 EXP\nENTER / A: CONTINUE'
+        : 'DRONE DEFEATED • ENTER / A: CONTINUE',
+    );
   }
 
   private drawRoom(): void {
@@ -228,6 +342,13 @@ export class FoundryTestScene extends Phaser.Scene {
   private refreshDroneHealth(): void {
     this.healthText?.setText(
       `DRONE ${this.droneHealth.current}/${this.droneHealth.maximum}`,
+    );
+  }
+
+  private refreshPlayerHealth(): void {
+    if (!this.save) return;
+    this.playerHealthText?.setText(
+      `DAD LIFE ${this.save.resources.life}/${this.save.resources.maxLife}`,
     );
   }
 }
