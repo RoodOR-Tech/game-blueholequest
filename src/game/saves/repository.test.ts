@@ -44,6 +44,27 @@ describe('SaveRepository', () => {
       maxLife: 6,
       magic: 1,
       maxMagic: 4,
+      lives: 3,
+      maxLives: 3,
+    });
+  });
+
+  it('adds the lives pool when loading a legacy save', () => {
+    const storage = new MemoryStorage();
+    const save = createNewSave('dad_paula');
+    const legacyResources = {
+      life: save.resources.life,
+      maxLife: save.resources.maxLife,
+      magic: save.resources.magic,
+      maxMagic: save.resources.maxMagic,
+    };
+    storage.setItem(
+      'blue-hole-quest:save',
+      JSON.stringify({ ...save, resources: legacyResources }),
+    );
+    expect(new SaveRepository(storage).load()?.resources).toMatchObject({
+      lives: 3,
+      maxLives: 3,
     });
   });
 });
