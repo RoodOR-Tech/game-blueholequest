@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BootScene } from '../scenes/BootScene';
+import { TeamSelectScene } from '../scenes/TeamSelectScene';
 import { TitleScene } from '../scenes/TitleScene';
 
 export const WORLD_WIDTH = 256;
@@ -13,7 +14,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   backgroundColor: '#08111d',
   pixelArt: true,
   roundPixels: true,
-  scene: [BootScene, TitleScene],
+  scene: [BootScene, TitleScene, TeamSelectScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
