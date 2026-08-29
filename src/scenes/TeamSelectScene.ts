@@ -55,6 +55,9 @@ export class TeamSelectScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-S', () => this.moveSelection(1));
     this.input.keyboard?.on('keydown-ENTER', () => this.confirmSelection());
     this.input.keyboard?.on('keydown-SPACE', () => this.confirmSelection());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.removeAllListeners();
+    });
   }
 
   private createCard(
