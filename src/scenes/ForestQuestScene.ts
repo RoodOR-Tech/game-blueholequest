@@ -4,6 +4,10 @@ import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { awardForestRelic } from '../game/progression/forestReward';
 import { LANTERN_ITEM_ID } from '../game/progression/routeRules';
+import {
+  recoverFromGameOver,
+  resolveKnockout,
+} from '../game/progression/lives';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
@@ -38,6 +42,8 @@ export class ForestQuestScene extends Phaser.Scene {
   private invulnerableUntil = 0;
   private questComplete = false;
   private retreating = false;
+  private knockedOut = false;
+  private gameOver = false;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -112,8 +118,19 @@ export class ForestQuestScene extends Phaser.Scene {
       if (
         this.controls.actions.get('confirm').pressed ||
         this.controls.actions.get('cancel').pressed
-      )
-        this.scene.start(this.retreating ? 'highway-26' : 'blue-hole-hub');
+      ) {
+        if (this.knockedOut) {
+          if (this.gameOver) {
+            this.save = recoverFromGameOver(
+              this.save,
+              new Date().toISOString(),
+            );
+            this.repository.save(this.save);
+            this.scene.start('blue-hole-hub');
+          } else this.scene.restart();
+        } else
+          this.scene.start(this.retreating ? 'highway-26' : 'blue-hole-hub');
+      }
       return;
     }
 
@@ -265,9 +282,18 @@ export class ForestQuestScene extends Phaser.Scene {
     this.time.delayedCall(180, () => this.player?.clearTint());
     this.refreshStatus();
     if (result.defeated) {
+      const knockout = resolveKnockout(this.save, new Date().toISOString());
+      this.save = knockout.save;
+      this.repository.save(this.save);
       this.questComplete = true;
-      this.retreating = true;
-      this.message?.setText('THE FOREST CLAIMS DAD • ENTER / A: RETREAT');
+      this.knockedOut = true;
+      this.gameOver = knockout.gameOver;
+      this.message?.setText(
+        knockout.gameOver
+          ? 'GAME OVER • ENTER / A: RECOVER HOME (-25% EXP)'
+          : `KNOCKED OUT • ${this.save.resources.lives} LIVES LEFT • ENTER / A: RETRY`,
+      );
+      this.refreshStatus();
     } else
       this.message?.setText(`OUCH • ${result.health.current} LIFE REMAINS`);
   }
@@ -335,7 +361,7 @@ export class ForestQuestScene extends Phaser.Scene {
   private refreshStatus(): void {
     if (!this.save) return;
     this.status?.setText(
-      `FOREST • LIFE ${this.save.resources.life}/${this.save.resources.maxLife} • RELICS ${this.save.relics.length}/5`,
+      `FOREST • HP ${this.save.resources.life}/${this.save.resources.maxLife} • LIVES ${this.save.resources.lives}/${this.save.resources.maxLives} • RELICS ${this.save.relics.length}/5`,
     );
   }
 
