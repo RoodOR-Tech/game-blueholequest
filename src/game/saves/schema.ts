@@ -21,6 +21,7 @@ export interface SaveDataV1 {
   readonly techniques: readonly string[];
   readonly spells: readonly string[];
   readonly relics: readonly string[];
+  readonly inventory: readonly string[];
   readonly flags: Readonly<Record<string, boolean>>;
   readonly savedAt: string;
 }
@@ -37,6 +38,7 @@ export function createNewSave(activeTeamId: TeamId): SaveDataV1 {
     techniques: [],
     spells: [],
     relics: [],
+    inventory: ['key_item_lantern'],
     flags: {},
     savedAt: new Date().toISOString(),
   };
@@ -54,7 +56,8 @@ export function isSaveData(value: unknown): value is SaveData {
     typeof candidate.resources === 'object' &&
     Array.isArray(candidate.techniques) &&
     Array.isArray(candidate.spells) &&
-    Array.isArray(candidate.relics)
+    Array.isArray(candidate.relics) &&
+    Array.isArray(candidate.inventory)
   );
 }
 
