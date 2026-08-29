@@ -59,6 +59,14 @@ export class TitleScene extends Phaser.Scene {
       yoyo: true,
       repeat: -1,
     });
+
+    const begin = (): void => {
+      if (this.scene.isActive('title')) this.scene.start('team-select');
+    };
+
+    this.input.keyboard?.once('keydown-ENTER', begin);
+    this.input.keyboard?.once('keydown-SPACE', begin);
+    this.input.once('pointerdown', begin);
   }
 }
 
