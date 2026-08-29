@@ -4,6 +4,7 @@ import {
   WILSON_RIVER_CHOICES,
 } from '../game/calamities/wilsonRiver';
 import { PhaserInput } from '../game/input/PhaserInput';
+import { recoverFromGameOver } from '../game/progression/lives';
 import { isHighway26FogGateBlocked } from '../game/progression/routeRules';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
@@ -27,6 +28,7 @@ export class Highway26Scene extends Phaser.Scene {
   private calamity?: Phaser.GameObjects.Container;
   private calamityChoiceIndex = 0;
   private calamityChoiceTexts: Phaser.GameObjects.Text[] = [];
+  private calamityGameOver = false;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -61,6 +63,15 @@ export class Highway26Scene extends Phaser.Scene {
   update(): void {
     if (!this.controls || !this.save) return;
     this.controls.update(this.input.gamepad?.getPad(0));
+
+    if (this.calamityGameOver) {
+      if (this.controls.actions.get('confirm').pressed) {
+        this.save = recoverFromGameOver(this.save, new Date().toISOString());
+        this.repository.save(this.save);
+        this.scene.start('blue-hole-hub');
+      }
+      return;
+    }
 
     if (this.calamity) {
       if (this.controls.actions.get('up').pressed) {
@@ -198,8 +209,8 @@ export class Highway26Scene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const labels = [
-      'FORD TRAFFIC  (-2 LIFE, +50 EXP)',
-      'FLOAT SUBARU  (-2 MAGIC, +25 EXP)',
+      'FORD (-2 HEALTH, +50 EXP, 25% LIFE RISK)',
+      'FLOAT (-2 MAGIC, +25 EXP, 10% LIFE RISK)',
       'WAIT FOR ODOT  (SAFE)',
     ];
     this.calamityChoiceTexts = labels.map((label, index) =>
@@ -245,8 +256,10 @@ export class Highway26Scene extends Phaser.Scene {
         life: this.save.resources.life,
         magic: this.save.resources.magic,
         experience: this.save.stats.experience,
+        lives: this.save.resources.lives,
       },
       choice,
+      Math.random(),
     );
     this.calamity.destroy(true);
     this.calamity = undefined;
@@ -257,6 +270,7 @@ export class Highway26Scene extends Phaser.Scene {
         ...this.save.resources,
         life: outcome.life,
         magic: outcome.magic,
+        lives: outcome.lives,
       },
       stats: { ...this.save.stats, experience: outcome.experience },
       flags: {
@@ -267,7 +281,12 @@ export class Highway26Scene extends Phaser.Scene {
       savedAt: new Date().toISOString(),
     };
     this.repository.save(this.save);
-    this.locationText?.setText(outcome.summary);
+    if (outcome.lives === 0) {
+      this.calamityGameOver = true;
+      this.locationText?.setText(
+        'FINAL LIFE LOST • GAME OVER • ENTER / A: RECOVER HOME (-25% EXP)',
+      );
+    } else this.locationText?.setText(outcome.summary);
   }
 
   private refreshLocation(): void {
