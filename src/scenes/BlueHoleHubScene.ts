@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { getTeam } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { recoveredRelicCount, RELIC_IDS } from '../game/progression/relics';
@@ -66,6 +67,8 @@ export class BlueHoleHubScene extends Phaser.Scene {
       direction.x * PLAYER_SPEED,
       direction.y * PLAYER_SPEED,
     );
+    if (horizontal !== 0) this.player.setFlipX(horizontal < 0);
+    this.player.play(direction.lengthSq() > 0 ? 'dad-walk' : 'dad-idle', true);
 
     const fixture = this.nearestFixture();
     this.prompt?.setVisible(Boolean(fixture));
@@ -129,17 +132,17 @@ export class BlueHoleHubScene extends Phaser.Scene {
   }
 
   private createPlayer(): void {
-    if (!this.textures.exists('player-placeholder')) {
-      const texture = this.add.graphics();
-      texture.fillStyle(0x5cb8e6).fillRect(0, 0, 12, 20);
-      texture.fillStyle(0xf2c49b).fillRect(3, 2, 6, 6);
-      texture.fillStyle(0x183b56).fillRect(2, 10, 8, 8);
-      texture.generateTexture('player-placeholder', 12, 20);
-      texture.destroy();
-    }
-    const player = this.physics.add.sprite(128, 190, 'player-placeholder');
-    player.setCollideWorldBounds(true);
-    player.body.setSize(12, 20);
+    const player = this.physics.add.sprite(
+      128,
+      190,
+      DAD_TEXTURE_KEY,
+      'dad-idle-0',
+    );
+    player
+      .setScale(DAD_SPRITE_SCALE)
+      .setCollideWorldBounds(true)
+      .play('dad-idle');
+    player.body.setSize(210, 500).setOffset(30, 150);
     this.player = player;
   }
 
