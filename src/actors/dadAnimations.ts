@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 
 export const DAD_TEXTURE_KEY = 'dad-sprites-v1';
 export const DAD_SPRITE_PATH = 'assets/sprites/dad-sprites-v1.png';
-export const DAD_SPRITE_SCALE = 0.065;
+export const DAD_SPRITE_SCALE = 0.09;
 
 const FRAMES = [
   { name: 'dad-idle-0', x: 0, width: 270 },
