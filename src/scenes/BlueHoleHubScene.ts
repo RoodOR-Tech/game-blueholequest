@@ -205,7 +205,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
       };
       this.repository.save(this.save);
       this.message.setText(
-        'FRIDGE CHECKED • LIFE & MAGIC RESTORED • GAME SAVED',
+        'FRIDGE CHECKED • HEALTH & MAGIC RESTORED • GAME SAVED',
       );
       this.cameras.main.flash(130, 140, 220, 255, false);
       this.refreshHud();
@@ -224,7 +224,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
     if (!this.save || !this.hud) return;
     const team = getTeam(this.save.activeTeamId);
     this.hud.setText(
-      `${team.displayName.toUpperCase()}  LIFE ${this.save.resources.life}/${this.save.resources.maxLife}  MAGIC ${this.save.resources.magic}/${this.save.resources.maxMagic}`,
+      `${team.displayName.toUpperCase()}  HP ${this.save.resources.life}/${this.save.resources.maxLife}  LIVES ${this.save.resources.lives}/${this.save.resources.maxLives}  MAGIC ${this.save.resources.magic}/${this.save.resources.maxMagic}`,
     );
   }
 
