@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { SaveRepository } from '../game/saves/repository';
@@ -21,6 +22,7 @@ export class FoundryTestScene extends Phaser.Scene {
   private lastGroundedAt = 0;
   private jumpBufferedUntil = 0;
   private nextAttackAt = 0;
+  private attackingUntil = 0;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -50,9 +52,18 @@ export class FoundryTestScene extends Phaser.Scene {
     const floor = this.add.rectangle(128, 224, 256, 32, 0x53352a);
     this.physics.add.existing(floor, true);
 
-    this.player = this.physics.add.sprite(80, 185, 'foundry-player');
-    this.player.setCollideWorldBounds(true).setGravityY(420);
-    this.player.body.setSize(12, 20);
+    this.player = this.physics.add.sprite(
+      80,
+      185,
+      DAD_TEXTURE_KEY,
+      'dad-idle-0',
+    );
+    this.player
+      .setScale(DAD_SPRITE_SCALE)
+      .setCollideWorldBounds(true)
+      .setGravityY(420)
+      .play('dad-idle');
+    this.player.body.setSize(210, 500).setOffset(30, 150);
     this.physics.add.collider(this.player, floor);
 
     this.drone = this.physics.add.sprite(154, 200, 'training-drone');
@@ -96,7 +107,10 @@ export class FoundryTestScene extends Phaser.Scene {
       Number(this.controls.actions.get('right').down) -
       Number(this.controls.actions.get('left').down);
     this.player.setVelocityX(horizontal * MOVE_SPEED);
-    if (horizontal !== 0) this.facing = horizontal < 0 ? -1 : 1;
+    if (horizontal !== 0) {
+      this.facing = horizontal < 0 ? -1 : 1;
+      this.player.setFlipX(horizontal < 0);
+    }
 
     if (this.player.body.blocked.down) this.lastGroundedAt = time;
     if (this.controls.actions.get('jump').pressed)
@@ -116,6 +130,10 @@ export class FoundryTestScene extends Phaser.Scene {
     ) {
       this.attack(time);
     }
+    if (time >= this.attackingUntil) {
+      if (!this.player.body.blocked.down) this.player.setFrame('dad-jump');
+      else this.player.play(horizontal === 0 ? 'dad-idle' : 'dad-walk', true);
+    }
     if (this.controls.actions.get('cancel').pressed)
       this.scene.start('highway-26');
   }
@@ -123,6 +141,8 @@ export class FoundryTestScene extends Phaser.Scene {
   private attack(time: number): void {
     if (!this.player) return;
     this.nextAttackAt = time + ATTACK_COOLDOWN_MS;
+    this.attackingUntil = time + 210;
+    this.player.play('dad-attack', true);
     const attackX = this.player.x + this.facing * 13;
     const effect = this.add.rectangle(
       attackX,
@@ -196,13 +216,6 @@ export class FoundryTestScene extends Phaser.Scene {
   }
 
   private createTextures(): void {
-    if (!this.textures.exists('foundry-player')) {
-      const player = this.add.graphics();
-      player.fillStyle(0x5cb8e6).fillRect(0, 0, 12, 20);
-      player.fillStyle(0xf2c49b).fillRect(3, 2, 6, 6);
-      player.fillStyle(0x263d4e).fillRect(2, 10, 8, 8);
-      player.generateTexture('foundry-player', 12, 20).destroy();
-    }
     if (!this.textures.exists('training-drone')) {
       const drone = this.add.graphics();
       drone.fillStyle(0x8ca4ad).fillRect(0, 3, 16, 10);
