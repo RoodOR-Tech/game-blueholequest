@@ -1,4 +1,8 @@
 import Phaser from 'phaser';
+import {
+  resolveWilsonRiverChoice,
+  WILSON_RIVER_CHOICES,
+} from '../game/calamities/wilsonRiver';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { isHighway26FogGateBlocked } from '../game/progression/routeRules';
 import { SaveRepository } from '../game/saves/repository';
@@ -21,6 +25,8 @@ export class Highway26Scene extends Phaser.Scene {
   private routeIndex = 0;
   private save?: SaveData;
   private calamity?: Phaser.GameObjects.Container;
+  private calamityChoiceIndex = 0;
+  private calamityChoiceTexts: Phaser.GameObjects.Text[] = [];
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -57,7 +63,18 @@ export class Highway26Scene extends Phaser.Scene {
     this.controls.update(this.input.gamepad?.getPad(0));
 
     if (this.calamity) {
-      if (this.controls.actions.get('confirm').pressed) this.dismissCalamity();
+      if (this.controls.actions.get('up').pressed) {
+        this.calamityChoiceIndex =
+          (this.calamityChoiceIndex + WILSON_RIVER_CHOICES.length - 1) %
+          WILSON_RIVER_CHOICES.length;
+        this.refreshCalamityChoices();
+      }
+      if (this.controls.actions.get('down').pressed) {
+        this.calamityChoiceIndex =
+          (this.calamityChoiceIndex + 1) % WILSON_RIVER_CHOICES.length;
+        this.refreshCalamityChoices();
+      }
+      if (this.controls.actions.get('confirm').pressed) this.resolveCalamity();
       return;
     }
 
@@ -167,37 +184,85 @@ export class Highway26Scene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const body = this.add
-      .text(
-        128,
-        116,
-        'WILSON RIVER CROSSING\n\n1. FORD THE TRAFFIC\n2. CAULK THE SUBARU AND FLOAT\n3. WAIT FOR ODOT\n\nPRESS A / ENTER: WAIT FOR ODOT',
-        {
+      .text(128, 84, 'WILSON RIVER CROSSING\nCHOOSE YOUR RISK:', {
+        align: 'center',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        fontSize: '7px',
+        lineSpacing: 2,
+      })
+      .setOrigin(0.5);
+    const labels = [
+      'FORD TRAFFIC  (-2 LIFE, +50 EXP)',
+      'FLOAT SUBARU  (-2 MAGIC, +25 EXP)',
+      'WAIT FOR ODOT  (SAFE)',
+    ];
+    this.calamityChoiceTexts = labels.map((label, index) =>
+      this.add
+        .text(128, 113 + index * 19, label, {
           align: 'center',
-          color: '#ffffff',
           fontFamily: 'monospace',
           fontSize: '7px',
-          lineSpacing: 2,
-        },
-      )
+          padding: { x: 4, y: 3 },
+        })
+        .setOrigin(0.5),
+    );
+    const hint = this.add
+      .text(128, 177, 'UP / DOWN: CHOOSE  •  A / ENTER: COMMIT', {
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        fontSize: '6px',
+      })
       .setOrigin(0.5);
+    this.calamityChoiceIndex = 0;
     this.calamity = this.add
-      .container(0, 0, [shade, title, body])
+      .container(0, 0, [shade, title, body, ...this.calamityChoiceTexts, hint])
       .setDepth(200);
+    this.refreshCalamityChoices();
   }
 
-  private dismissCalamity(): void {
+  private refreshCalamityChoices(): void {
+    this.calamityChoiceTexts.forEach((text, index) => {
+      const selected = index === this.calamityChoiceIndex;
+      text
+        .setText(`${selected ? '▶' : ' '} ${text.text.replace(/^.? /, '')}`)
+        .setColor(selected ? '#f6d77a' : '#ffffff')
+        .setBackgroundColor(selected ? '#31485a' : '');
+    });
+  }
+
+  private resolveCalamity(): void {
     if (!this.calamity || !this.save) return;
+    const choice = WILSON_RIVER_CHOICES[this.calamityChoiceIndex];
+    if (!choice) return;
+    const outcome = resolveWilsonRiverChoice(
+      {
+        life: this.save.resources.life,
+        magic: this.save.resources.magic,
+        experience: this.save.stats.experience,
+      },
+      choice,
+    );
     this.calamity.destroy(true);
     this.calamity = undefined;
+    this.calamityChoiceTexts = [];
     this.save = {
       ...this.save,
-      flags: { ...this.save.flags, calamity_wilson_river_seen: true },
+      resources: {
+        ...this.save.resources,
+        life: outcome.life,
+        magic: outcome.magic,
+      },
+      stats: { ...this.save.stats, experience: outcome.experience },
+      flags: {
+        ...this.save.flags,
+        calamity_wilson_river_seen: true,
+        [outcome.flag]: true,
+      },
       savedAt: new Date().toISOString(),
     };
     this.repository.save(this.save);
-    this.locationText?.setText(
-      'ODOT CLEARS THE CROSSING • THE JOURNEY CONTINUES',
-    );
+    this.locationText?.setText(outcome.summary);
   }
 
   private refreshLocation(): void {
