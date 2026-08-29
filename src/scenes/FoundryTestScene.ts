@@ -17,6 +17,8 @@ const DRONE_CHARGE_SPEED = 92;
 const DRONE_WINDUP_MS = 420;
 const DRONE_ATTACK_COOLDOWN_MS = 1350;
 const PLAYER_INVULNERABLE_MS = 900;
+const PLAYER_ATTACK_REACH = 19;
+const DRONE_SCALE = 1.45;
 
 export class FoundryTestScene extends Phaser.Scene {
   private controls?: PhaserInput;
@@ -82,7 +84,10 @@ export class FoundryTestScene extends Phaser.Scene {
     this.physics.add.collider(this.player, floor);
 
     this.drone = this.physics.add.sprite(154, 200, 'training-drone');
-    this.drone.setCollideWorldBounds(true).setImmovable(true);
+    this.drone
+      .setScale(DRONE_SCALE)
+      .setCollideWorldBounds(true)
+      .setImmovable(true);
     this.drone.body.setAllowGravity(false);
     this.drone.body.setSize(16, 14);
 
@@ -175,7 +180,7 @@ export class FoundryTestScene extends Phaser.Scene {
     const distance = this.player.x - this.drone.x;
 
     if (time < this.droneChargingUntil) {
-      if (Math.abs(distance) < 17 && time >= this.playerInvulnerableUntil)
+      if (Math.abs(distance) < 22 && time >= this.playerInvulnerableUntil)
         this.damagePlayer(time, Math.sign(distance) || 1);
       return;
     }
@@ -243,12 +248,12 @@ export class FoundryTestScene extends Phaser.Scene {
     this.nextAttackAt = time + ATTACK_COOLDOWN_MS;
     this.attackingUntil = time + 210;
     this.player.play('dad-attack', true);
-    const attackX = this.player.x + this.facing * 13;
+    const attackX = this.player.x + this.facing * PLAYER_ATTACK_REACH;
     const effect = this.add.rectangle(
       attackX,
       this.player.y,
-      18,
-      7,
+      25,
+      10,
       0xf6d77a,
       0.78,
     );
@@ -261,10 +266,10 @@ export class FoundryTestScene extends Phaser.Scene {
 
     if (!this.drone?.active) return;
     const attackBounds = new Phaser.Geom.Rectangle(
-      attackX - 9,
-      this.player.y - 5,
-      18,
-      10,
+      attackX - 13,
+      this.player.y - 8,
+      26,
+      16,
     );
     if (
       !Phaser.Geom.Intersects.RectangleToRectangle(
