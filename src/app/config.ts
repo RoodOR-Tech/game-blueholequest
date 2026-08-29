@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BootScene } from '../scenes/BootScene';
+import { BlueHoleHubScene } from '../scenes/BlueHoleHubScene';
 import { TeamSelectScene } from '../scenes/TeamSelectScene';
 import { TitleScene } from '../scenes/TitleScene';
 
@@ -14,7 +15,12 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   backgroundColor: '#08111d',
   pixelArt: true,
   roundPixels: true,
-  scene: [BootScene, TitleScene, TeamSelectScene],
+  scene: [BootScene, TitleScene, TeamSelectScene, BlueHoleHubScene],
+  physics: {
+    default: 'arcade',
+    arcade: { gravity: { x: 0, y: 0 }, debug: false },
+  },
+  input: { gamepad: true },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
