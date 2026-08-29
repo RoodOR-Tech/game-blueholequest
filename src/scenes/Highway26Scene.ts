@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
 import { PhaserInput } from '../game/input/PhaserInput';
+import { isHighway26FogGateBlocked } from '../game/progression/routeRules';
+import { SaveRepository } from '../game/saves/repository';
+import type { SaveData } from '../game/saves/schema';
+import { TouchControls } from '../ui/TouchControls';
 
 const ROUTE = [
   { x: 27, y: 184, label: 'ROCKAWAY' },
@@ -15,13 +19,22 @@ export class Highway26Scene extends Phaser.Scene {
   private marker?: Phaser.GameObjects.Arc;
   private locationText?: Phaser.GameObjects.Text;
   private routeIndex = 0;
+  private save?: SaveData;
+  private calamity?: Phaser.GameObjects.Container;
+  private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
     super('highway-26');
   }
 
   create(): void {
+    this.save = this.repository.load() ?? undefined;
+    if (!this.save) {
+      this.scene.start('team-select');
+      return;
+    }
     this.controls = new PhaserInput(this);
+    new TouchControls(this, this.controls);
     this.drawMap();
     this.marker = this.add
       .circle(ROUTE[0].x, ROUTE[0].y, 5, 0xf6d77a)
@@ -40,17 +53,30 @@ export class Highway26Scene extends Phaser.Scene {
   }
 
   update(): void {
-    if (!this.controls) return;
+    if (!this.controls || !this.save) return;
     this.controls.update(this.input.gamepad?.getPad(0));
 
-    if (
+    if (this.calamity) {
+      if (this.controls.actions.get('confirm').pressed) this.dismissCalamity();
+      return;
+    }
+
+    const advancing =
       (this.controls.actions.get('right').pressed ||
         this.controls.actions.get('up').pressed ||
         this.controls.actions.get('confirm').pressed) &&
-      this.routeIndex < ROUTE.length - 1
-    ) {
-      this.routeIndex += 1;
-      this.moveMarker();
+      this.routeIndex < ROUTE.length - 1;
+    if (advancing) {
+      const targetIndex = this.routeIndex + 1;
+      if (isHighway26FogGateBlocked(targetIndex, this.save.inventory)) {
+        this.locationText?.setText(
+          'COASTAL FOG BLOCKS THE PASS • FIND THE COLEMAN LANTERN',
+        );
+        this.cameras.main.shake(100, 0.003);
+      } else {
+        this.routeIndex = targetIndex;
+        this.moveMarker();
+      }
     }
 
     if (
@@ -115,6 +141,55 @@ export class Highway26Scene extends Phaser.Scene {
       duration: 140,
     });
     this.refreshLocation();
+    if (this.routeIndex === 1 && !this.save?.flags.calamity_wilson_river_seen) {
+      this.showCalamity();
+    }
+  }
+
+  private showCalamity(): void {
+    const shade = this.add
+      .rectangle(128, 120, 236, 152, 0x08111d, 0.96)
+      .setStrokeStyle(2, 0xf6d77a);
+    const title = this.add
+      .text(128, 58, 'OREGON TRAIL CALAMITY!', {
+        color: '#f6d77a',
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    const body = this.add
+      .text(
+        128,
+        116,
+        'WILSON RIVER CROSSING\n\n1. FORD THE TRAFFIC\n2. CAULK THE SUBARU AND FLOAT\n3. WAIT FOR ODOT\n\nPRESS A / ENTER: WAIT FOR ODOT',
+        {
+          align: 'center',
+          color: '#ffffff',
+          fontFamily: 'monospace',
+          fontSize: '7px',
+          lineSpacing: 2,
+        },
+      )
+      .setOrigin(0.5);
+    this.calamity = this.add
+      .container(0, 0, [shade, title, body])
+      .setDepth(200);
+  }
+
+  private dismissCalamity(): void {
+    if (!this.calamity || !this.save) return;
+    this.calamity.destroy(true);
+    this.calamity = undefined;
+    this.save = {
+      ...this.save,
+      flags: { ...this.save.flags, calamity_wilson_river_seen: true },
+      savedAt: new Date().toISOString(),
+    };
+    this.repository.save(this.save);
+    this.locationText?.setText(
+      'ODOT CLEARS THE CROSSING • THE JOURNEY CONTINUES',
+    );
   }
 
   private refreshLocation(): void {
