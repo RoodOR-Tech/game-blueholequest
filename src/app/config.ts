@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BootScene } from '../scenes/BootScene';
 import { BlueHoleHubScene } from '../scenes/BlueHoleHubScene';
+import { Highway26Scene } from '../scenes/Highway26Scene';
 import { TeamSelectScene } from '../scenes/TeamSelectScene';
 import { TitleScene } from '../scenes/TitleScene';
 
@@ -15,7 +16,13 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   backgroundColor: '#08111d',
   pixelArt: true,
   roundPixels: true,
-  scene: [BootScene, TitleScene, TeamSelectScene, BlueHoleHubScene],
+  scene: [
+    BootScene,
+    TitleScene,
+    TeamSelectScene,
+    BlueHoleHubScene,
+    Highway26Scene,
+  ],
   physics: {
     default: 'arcade',
     arcade: { gravity: { x: 0, y: 0 }, debug: false },
