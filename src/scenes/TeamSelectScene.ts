@@ -143,9 +143,7 @@ export class TeamSelectScene extends Phaser.Scene {
 
     const repository = new SaveRepository(window.localStorage);
     repository.save(createNewSave(team.id));
-    this.statusText
-      .setColor('#83e38e')
-      .setText('TEAM READY • BLUE HOLE HUB COMING NEXT');
+    this.scene.start('blue-hole-hub');
   }
 }
 
