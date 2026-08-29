@@ -9,6 +9,7 @@ export class PhaserInput {
   readonly actions = new ActionState();
   private readonly bindings: KeyBindings;
   private readonly virtualActions = new Set<GameAction>();
+  private readonly pendingActions = new Set<GameAction>();
 
   constructor(scene: Phaser.Scene) {
     const keyboard = scene.input.keyboard;
@@ -43,6 +44,21 @@ export class PhaserInput {
       spell: [key(Phaser.Input.Keyboard.KeyCodes.C)],
       pause: [key(Phaser.Input.Keyboard.KeyCodes.P)],
     };
+
+    for (const [action, keys] of Object.entries(this.bindings) as [
+      GameAction,
+      readonly Phaser.Input.Keyboard.Key[],
+    ][]) {
+      keys.forEach((boundKey) => {
+        boundKey.on('down', () => this.pendingActions.add(action));
+      });
+    }
+
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      Object.values(this.bindings)
+        .flat()
+        .forEach((boundKey) => boundKey.removeAllListeners());
+    });
   }
 
   setVirtualAction(action: GameAction, down: boolean): void {
@@ -51,7 +67,7 @@ export class PhaserInput {
   }
 
   update(gamepad?: Phaser.Input.Gamepad.Gamepad): void {
-    const active = new Set(this.virtualActions);
+    const active = new Set([...this.virtualActions, ...this.pendingActions]);
 
     for (const [action, keys] of Object.entries(this.bindings) as [
       GameAction,
@@ -74,6 +90,7 @@ export class PhaserInput {
     }
 
     this.actions.update(active);
+    this.pendingActions.clear();
   }
 }
 
