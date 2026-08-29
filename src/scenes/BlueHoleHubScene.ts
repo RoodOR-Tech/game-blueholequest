@@ -9,7 +9,7 @@ const PLAYER_SPEED = 58;
 const INTERACTION_DISTANCE = 31;
 
 interface HubFixture {
-  readonly id: 'fridge' | 'mantle';
+  readonly id: 'fridge' | 'mantle' | 'exit';
   readonly x: number;
   readonly y: number;
 }
@@ -17,6 +17,7 @@ interface HubFixture {
 const FIXTURES: readonly HubFixture[] = [
   { id: 'fridge', x: 35, y: 113 },
   { id: 'mantle', x: 191, y: 99 },
+  { id: 'exit', x: 128, y: 218 },
 ];
 
 export class BlueHoleHubScene extends Phaser.Scene {
@@ -100,6 +101,17 @@ export class BlueHoleHubScene extends Phaser.Scene {
     graphics.fillStyle(0xffc14f).fillTriangle(207, 151, 215, 131, 224, 151);
     graphics.fillStyle(0x3a2119).fillRect(169, 74, 80, 7);
 
+    // Beach-access exit mat. The player begins close enough to see its prompt.
+    graphics.fillStyle(0x172a35).fillRoundedRect(105, 211, 46, 18, 2);
+    graphics.lineStyle(1, 0xf6d77a).strokeRoundedRect(105, 211, 46, 18, 2);
+    this.add
+      .text(128, 217, 'TO HWY 26', {
+        color: '#f6d77a',
+        fontFamily: 'monospace',
+        fontSize: '6px',
+      })
+      .setOrigin(0.5);
+
     this.mantleSockets = RELIC_IDS.map((_, index) =>
       this.add
         .circle(183 + index * 13, 70, 4, 0x10161c)
@@ -171,6 +183,10 @@ export class BlueHoleHubScene extends Phaser.Scene {
 
   private interact(id: HubFixture['id']): void {
     if (!this.save || !this.message) return;
+    if (id === 'exit') {
+      this.scene.start('highway-26');
+      return;
+    }
     if (id === 'fridge') {
       this.save = {
         ...this.save,
