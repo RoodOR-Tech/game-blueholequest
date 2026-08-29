@@ -78,6 +78,11 @@ export class Highway26Scene extends Phaser.Scene {
       return;
     }
 
+    if (this.routeIndex === 2 && this.controls.actions.get('confirm').pressed) {
+      this.scene.start('forest-quest');
+      return;
+    }
+
     if (
       this.routeIndex === ROUTE.length - 1 &&
       this.controls.actions.get('confirm').pressed
@@ -272,6 +277,8 @@ export class Highway26Scene extends Phaser.Scene {
       this.locationText.setText('ROCKAWAY BEACH • ESC TO RETURN HOME');
     } else if (this.routeIndex === ROUTE.length - 1) {
       this.locationText.setText('HILLSBORO WEST • ENTER / A: ENTER FOUNDRY');
+    } else if (this.routeIndex === 2) {
+      this.locationText.setText('COAST RANGE FOREST • ENTER / A: EXPLORE');
     } else {
       this.locationText.setText(`${point.label} • KEEP TRAVELING EAST`);
     }
