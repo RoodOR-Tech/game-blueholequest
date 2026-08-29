@@ -3,6 +3,10 @@ import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { awardFoundryVictory } from '../game/combat/foundryReward';
 import { PhaserInput } from '../game/input/PhaserInput';
+import {
+  recoverFromGameOver,
+  resolveKnockout,
+} from '../game/progression/lives';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
@@ -38,7 +42,8 @@ export class FoundryTestScene extends Phaser.Scene {
   private droneChargingUntil = 0;
   private playerInvulnerableUntil = 0;
   private combatOver = false;
-  private retreatingHome = false;
+  private knockedOut = false;
+  private gameOver = false;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -134,8 +139,18 @@ export class FoundryTestScene extends Phaser.Scene {
       if (
         this.controls.actions.get('confirm').pressed ||
         this.controls.actions.get('cancel').pressed
-      )
-        this.scene.start(this.retreatingHome ? 'blue-hole-hub' : 'highway-26');
+      ) {
+        if (this.knockedOut) {
+          if (this.gameOver) {
+            this.save = recoverFromGameOver(
+              this.save,
+              new Date().toISOString(),
+            );
+            this.repository.save(this.save);
+            this.scene.start('blue-hole-hub');
+          } else this.scene.restart();
+        } else this.scene.start('highway-26');
+      }
       return;
     }
 
@@ -232,10 +247,19 @@ export class FoundryTestScene extends Phaser.Scene {
     this.refreshPlayerHealth();
 
     if (result.defeated) {
+      const knockout = resolveKnockout(this.save, new Date().toISOString());
+      this.save = knockout.save;
+      this.repository.save(this.save);
       this.combatOver = true;
-      this.retreatingHome = true;
+      this.knockedOut = true;
+      this.gameOver = knockout.gameOver;
       this.drone?.setVelocityX(0);
-      this.message?.setText('DAD IS DOWN • ENTER / A: RETREAT HOME');
+      this.message?.setText(
+        knockout.gameOver
+          ? 'GAME OVER • ENTER / A: RECOVER HOME (-25% EXP)'
+          : `KNOCKED OUT • ${this.save.resources.lives} LIVES LEFT • ENTER / A: RETRY`,
+      );
+      this.refreshPlayerHealth();
     } else {
       this.message?.setText(
         `DRONE HIT • ${result.health.current} LIFE REMAINS`,
@@ -353,7 +377,7 @@ export class FoundryTestScene extends Phaser.Scene {
   private refreshPlayerHealth(): void {
     if (!this.save) return;
     this.playerHealthText?.setText(
-      `DAD LIFE ${this.save.resources.life}/${this.save.resources.maxLife}`,
+      `DAD HP ${this.save.resources.life}/${this.save.resources.maxLife}  LIVES ${this.save.resources.lives}/${this.save.resources.maxLives}`,
     );
   }
 }
