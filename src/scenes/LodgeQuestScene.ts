@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
+import { CHECKPOINTS, saveAtCheckpoint } from '../game/progression/checkpoints';
 import {
   prepareCheckpointRetry,
   recoverFromGameOver,
@@ -46,6 +47,12 @@ export class LodgeQuestScene extends Phaser.Scene {
       this.scene.start('team-select');
       return;
     }
+    this.save = saveAtCheckpoint(
+      this.save,
+      CHECKPOINTS.lodge,
+      new Date().toISOString(),
+    );
+    this.repository.save(this.save);
     this.drawLodge();
     this.createTextures();
     this.controls = new PhaserInput(this);
@@ -68,7 +75,22 @@ export class LodgeQuestScene extends Phaser.Scene {
     this.boss.setImmovable(true);
     this.boss.body.setAllowGravity(false);
     this.createHud();
-    this.message?.setText('CAMP 18 LODGE • THE KEG GOLEM HAS THE AMBER STEIN');
+    this.drawSavePoint(76, 174);
+    this.message?.setText(
+      'CHECKPOINT SAVED • THE KEG GOLEM HAS THE AMBER STEIN',
+    );
+  }
+
+  private drawSavePoint(x: number, y: number): void {
+    this.add.circle(x, y, 8, 0x5fc9ee, 0.25).setStrokeStyle(1, 0xb9efff);
+    this.add.circle(x, y, 3, 0xe8fbff);
+    this.add
+      .text(x, y - 15, 'SAVE', {
+        color: '#b9efff',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      })
+      .setOrigin(0.5);
   }
 
   private resetEncounterState(): void {
