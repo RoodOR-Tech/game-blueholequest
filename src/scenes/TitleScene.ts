@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
+import { sceneForCheckpoint } from '../game/progression/checkpoints';
 
 const COLORS = {
   ocean: 0x176eb0,
@@ -81,7 +82,7 @@ export class TitleScene extends Phaser.Scene {
   private activateSelection(): void {
     const continuing = Boolean(this.save) && this.selectedIndex === 0;
     if (continuing) {
-      this.scene.start('blue-hole-hub');
+      this.scene.start(sceneForCheckpoint(this.save!.checkpointId));
       return;
     }
     if (this.save && !this.confirmingNewGame) {
