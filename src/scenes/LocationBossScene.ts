@@ -3,7 +3,7 @@ import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import {
-  awardLocationCrystal,
+  awardLocationArtifact,
   BOSS_LOCATIONS,
   bossLocationById,
   bossLocationForCheckpoint,
@@ -30,7 +30,7 @@ export class LocationBossScene extends Phaser.Scene {
   private controls?: PhaserInput;
   private player?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private boss?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
-  private crystal?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+  private artifact?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private projectiles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
   private bossHealth: HealthState = { current: 1, maximum: 1 };
   private hud?: Phaser.GameObjects.Text;
@@ -426,29 +426,29 @@ export class LocationBossScene extends Phaser.Scene {
     this.boss.destroy();
     this.projectiles.forEach((shot) => shot.destroy());
     this.projectiles = [];
-    this.crystal = this.physics.add.sprite(x, y, 'location-crystal');
-    this.crystal.body.setAllowGravity(false);
+    this.artifact = this.physics.add.sprite(x, y, 'location-artifact');
+    this.artifact.body.setAllowGravity(false);
     this.tweens.add({
-      targets: this.crystal,
+      targets: this.artifact,
       y: y - 8,
       yoyo: true,
       repeat: -1,
       duration: 520,
     });
     if (this.player)
-      this.physics.add.overlap(this.player, this.crystal, () =>
-        this.collectCrystal(),
+      this.physics.add.overlap(this.player, this.artifact, () =>
+        this.collectArtifact(),
       );
     this.message?.setText(
-      `${this.location.bossName} DEFEATED • CLAIM THE CRYSTAL!`,
+      `${this.location.bossName} DEFEATED • CLAIM THE ARTIFACT!`,
     );
     this.refreshHud();
   }
 
-  private collectCrystal(): void {
-    if (!this.crystal?.active || !this.save) return;
-    this.crystal.destroy();
-    this.save = awardLocationCrystal(
+  private collectArtifact(): void {
+    if (!this.artifact?.active || !this.save) return;
+    this.artifact.destroy();
+    this.save = awardLocationArtifact(
       this.save,
       this.location,
       new Date().toISOString(),
@@ -461,8 +461,8 @@ export class LocationBossScene extends Phaser.Scene {
     const nextLocation = BOSS_LOCATIONS[currentIndex + 1];
     this.message?.setText(
       nextLocation
-        ? `${this.location.crystalName} RECOVERED • +100 XP\nNEXT: ${nextLocation.label} • A: CONTINUE`
-        : `${this.location.crystalName} RECOVERED • +100 XP\nALL CRYSTALS FOUND • A: RETURN`,
+        ? `${this.location.artifactName} RECOVERED • +100 XP\nNEXT: ${nextLocation.label} • A: CONTINUE`
+        : `${this.location.artifactName} RECOVERED • +100 XP\nALL ARTIFACTS FOUND • A: RETURN`,
     );
     this.refreshHud();
   }
@@ -525,7 +525,7 @@ export class LocationBossScene extends Phaser.Scene {
       'boss-projectile',
       'boss-wave',
       'boss-meteor',
-      'location-crystal',
+      'location-artifact',
     ].forEach((key) => {
       if (this.textures.exists(key)) this.textures.remove(key);
     });
@@ -590,12 +590,33 @@ export class LocationBossScene extends Phaser.Scene {
       meteor.lineStyle(2, 0xffae54).strokeCircle(8, 9, 7);
       meteor.generateTexture('boss-meteor', 16, 18).destroy();
     }
-    if (!this.textures.exists('location-crystal')) {
-      const crystal = this.add.graphics();
-      crystal.fillStyle(this.location.color).fillTriangle(9, 0, 17, 10, 9, 23);
-      crystal.fillTriangle(9, 0, 1, 10, 9, 23);
-      crystal.lineStyle(2, 0xffffff, 0.8).lineBetween(9, 1, 9, 22);
-      crystal.generateTexture('location-crystal', 18, 24).destroy();
+    if (!this.textures.exists('location-artifact')) {
+      const artifact = this.add.graphics();
+      if (this.location.id === 'hillsboro_west') {
+        artifact.fillStyle(0x7de4ff).fillTriangle(10, 1, 18, 10, 15, 21);
+        artifact.fillTriangle(10, 1, 2, 10, 5, 21);
+        artifact.fillStyle(0x31536a).fillRect(5, 15, 4, 7).fillRect(13, 15, 4, 7);
+        artifact.fillStyle(0xffffff).fillCircle(7, 9, 2).fillCircle(13, 9, 2);
+      } else if (this.location.id === 'hillsboro_east') {
+        artifact.fillStyle(0xf2c84b).fillRoundedRect(7, 2, 7, 21, 3);
+        artifact.fillCircle(5, 8, 4).fillCircle(16, 8, 4);
+        artifact.lineStyle(2, 0xffefaa).strokeRoundedRect(7, 2, 7, 21, 3);
+      } else if (this.location.id === 'milwaukie') {
+        artifact.fillStyle(0xc98232).fillRoundedRect(3, 5, 14, 17, 3);
+        artifact.lineStyle(3, 0xffd58a).strokeRoundedRect(3, 5, 14, 17, 3);
+        artifact.strokeCircle(18, 12, 5);
+        artifact.fillStyle(0xffefc2).fillRect(5, 2, 10, 5);
+      } else if (this.location.id === 'walla_walla') {
+        artifact.fillStyle(0x57c76d).fillEllipse(10, 11, 18, 22);
+        artifact.lineStyle(2, 0xd8ffd8).lineBetween(10, 1, 10, 23);
+        artifact.lineBetween(10, 10, 17, 6).lineBetween(10, 15, 3, 11);
+      } else {
+        artifact.fillStyle(0xe6edf2).fillTriangle(1, 22, 10, 2, 19, 22);
+        artifact.fillStyle(0xb9c8d2).fillTriangle(10, 2, 19, 22, 12, 16);
+        artifact.fillStyle(0xffffff).fillTriangle(6, 11, 10, 2, 14, 11);
+        artifact.lineStyle(2, 0x60717c).lineBetween(1, 22, 19, 22);
+      }
+      artifact.generateTexture('location-artifact', 21, 24).destroy();
     }
   }
 }
