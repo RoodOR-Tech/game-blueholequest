@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { sceneForCheckpoint } from '../game/progression/checkpoints';
+import { sanitizeGamepads } from '../game/input/PhaserInput';
 
 const COLORS = {
   ocean: 0x176eb0,
@@ -18,6 +19,9 @@ export class TitleScene extends Phaser.Scene {
   private options: Phaser.GameObjects.Text[] = [];
   private status?: Phaser.GameObjects.Text;
   private confirmingNewGame = false;
+  private readonly selectPrevious = () => this.moveSelection(-1);
+  private readonly selectNext = () => this.moveSelection(1);
+  private readonly activate = () => this.activateSelection();
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -28,15 +32,20 @@ export class TitleScene extends Phaser.Scene {
     this.save = this.repository.load() ?? undefined;
     this.drawBackdrop();
     this.createMenu();
-    this.input.keyboard?.on('keydown-UP', () => this.moveSelection(-1));
-    this.input.keyboard?.on('keydown-W', () => this.moveSelection(-1));
-    this.input.keyboard?.on('keydown-DOWN', () => this.moveSelection(1));
-    this.input.keyboard?.on('keydown-S', () => this.moveSelection(1));
-    this.input.keyboard?.on('keydown-ENTER', () => this.activateSelection());
-    this.input.keyboard?.on('keydown-SPACE', () => this.activateSelection());
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
-      this.input.keyboard?.removeAllListeners(),
-    );
+    this.input.keyboard?.on('keydown-UP', this.selectPrevious);
+    this.input.keyboard?.on('keydown-W', this.selectPrevious);
+    this.input.keyboard?.on('keydown-DOWN', this.selectNext);
+    this.input.keyboard?.on('keydown-S', this.selectNext);
+    this.input.keyboard?.on('keydown-ENTER', this.activate);
+    this.input.keyboard?.on('keydown-SPACE', this.activate);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.off('keydown-UP', this.selectPrevious);
+      this.input.keyboard?.off('keydown-W', this.selectPrevious);
+      this.input.keyboard?.off('keydown-DOWN', this.selectNext);
+      this.input.keyboard?.off('keydown-S', this.selectNext);
+      this.input.keyboard?.off('keydown-ENTER', this.activate);
+      this.input.keyboard?.off('keydown-SPACE', this.activate);
+    });
   }
 
   private createMenu(): void {
@@ -80,6 +89,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private activateSelection(): void {
+    sanitizeGamepads(this);
     const continuing = Boolean(this.save) && this.selectedIndex === 0;
     if (continuing) {
       this.scene.start(sceneForCheckpoint(this.save!.checkpointId));
