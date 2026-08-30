@@ -88,9 +88,18 @@ export class LocationBossScene extends Phaser.Scene {
       .play('dad-idle');
     this.player.body.setSize(210, 500).setOffset(30, 150);
     this.boss = this.physics.add.sprite(205, 145, 'location-boss-sprite');
+    const bossScale =
+      {
+        hillsboro_west: 1,
+        hillsboro_east: 1.1,
+        milwaukie: 1.2,
+        walla_walla: 1.32,
+        bend: 1.48,
+      }[this.location.id] ?? 1;
     this.boss.setImmovable(true);
+    this.boss.setScale(bossScale);
     this.boss.body.setAllowGravity(false);
-    this.boss.body.setSize(34, 42);
+    this.boss.body.setSize(36, 44);
     this.bossHealth = {
       current: this.location.maximumHealth,
       maximum: this.location.maximumHealth,
@@ -200,62 +209,143 @@ export class LocationBossScene extends Phaser.Scene {
   private bossAttack(time: number): void {
     if (!this.boss || !this.player) return;
     this.nextBossAttackAt = time + this.location.attackInterval;
+    this.boss.setTint(this.location.color);
+    this.time.delayedCall(130, () => this.boss?.clearTint());
+    if (this.location.id === 'hillsboro_east') {
+      this.castLightning();
+      return;
+    }
+    if (this.location.id === 'milwaukie') {
+      this.launchRiverWaves();
+      return;
+    }
+    if (this.location.id === 'walla_walla') {
+      this.eruptRoots();
+      return;
+    }
+    if (this.location.id === 'bend') {
+      this.summonMeteors();
+      return;
+    }
     const base = new Phaser.Math.Vector2(
       this.player.x - this.boss.x,
       this.player.y - this.boss.y,
     ).normalize();
-    const locationIndex = [
-      'hillsboro_west',
-      'hillsboro_east',
-      'milwaukie',
-      'walla_walla',
-      'bend',
-    ].indexOf(this.location.id);
-    const patterns = [
-      [0],
-      [-0.2, 0.2],
-      [-0.32, 0, 0.32],
-      [-0.48, -0.16, 0.16, 0.48],
-      [-0.58, -0.29, 0, 0.29, 0.58],
-    ] as const;
-    const spread = patterns[locationIndex] ?? patterns[0];
-    spread.forEach((angle) => {
-      const direction = base.clone().rotate(angle);
-      const shot = this.physics.add.sprite(
-        this.boss!.x,
-        this.boss!.y,
-        'boss-projectile',
-      );
-      shot.body.setAllowGravity(false);
-      shot.setVelocity(
-        direction.x * this.location.projectileSpeed,
-        direction.y * this.location.projectileSpeed,
-      );
-      this.projectiles.push(shot);
-    });
-    this.boss.setTint(this.location.color);
-    if (this.location.id === 'hillsboro_east')
-      this.boss.y = Phaser.Math.Clamp(this.boss.y + (Math.random() < 0.5 ? -28 : 28), 92, 188);
-    else if (this.location.id === 'milwaukie')
-      this.boss.x = Phaser.Math.Clamp(this.boss.x - 14, 150, 218);
-    else if (this.location.id === 'walla_walla')
-      this.boss.setVelocityY(Math.sin(time / 180) * 30);
-    else if (this.location.id === 'bend') {
-      this.cameras.main.shake(120, 0.004);
-      this.boss.setScale(1.08);
-      this.time.delayedCall(180, () => this.boss?.setScale(1));
-    }
-    this.time.delayedCall(130, () => this.boss?.clearTint());
-    this.message?.setText(
-      spread.length === 1 ? 'INCOMING SHOT • MOVE!' : 'SPREAD ATTACK • FIND THE GAP!',
+    this.spawnBossProjectile(
+      'boss-projectile',
+      this.boss.x,
+      this.boss.y,
+      base.x * this.location.projectileSpeed,
+      base.y * this.location.projectileSpeed,
     );
+    this.message?.setText('SENTINEL SHOT • MOVE OR DEFLECT!');
+  }
+
+  private castLightning(): void {
+    if (!this.player || !this.boss) return;
+    const targets = [
+      Phaser.Math.Clamp(this.player.x, 28, 228),
+      Phaser.Math.Clamp(this.player.x + (Math.random() < 0.5 ? -52 : 52), 28, 228),
+    ];
+    targets.forEach((x) => {
+      const warning = this.add
+        .rectangle(x, 145, 15, 142, 0xffe36a, 0.18)
+        .setStrokeStyle(2, 0xfff5b0);
+      this.time.delayedCall(520, () => {
+        warning.setFillStyle(0xe9f8ff, 0.95).setScale(1.35, 1);
+        this.cameras.main.flash(70, 210, 235, 255, false);
+        if (
+          this.player &&
+          Math.abs(this.player.x - x) < 14 &&
+          !this.encounterOver
+        )
+          this.damagePlayer(this.time.now);
+        this.time.delayedCall(110, () => warning.destroy());
+      });
+    });
+    this.boss.y = Phaser.Math.Clamp(
+      this.boss.y + (Math.random() < 0.5 ? -30 : 30),
+      100,
+      184,
+    );
+    this.message?.setText('LIGHTNING COLUMNS • LEAVE THE WARNING ZONES!');
+  }
+
+  private launchRiverWaves(): void {
+    if (!this.boss) return;
+    [174, 205].forEach((y, index) => {
+      this.time.delayedCall(index * 260, () => {
+        if (!this.boss?.active) return;
+        this.spawnBossProjectile('boss-wave', this.boss.x - 22, y, -92, 0, 'wave');
+      });
+    });
+    this.boss.x = Phaser.Math.Clamp(this.boss.x - 12, 164, 220);
+    this.message?.setText('RIVER SURGE • SLIP BETWEEN THE WAVES!');
+  }
+
+  private eruptRoots(): void {
+    if (!this.player) return;
+    const targets = [
+      Phaser.Math.Clamp(this.player.x, 28, 228),
+      Phaser.Math.Clamp(this.player.x - 48, 28, 228),
+      Phaser.Math.Clamp(this.player.x + 48, 28, 228),
+    ];
+    targets.forEach((x, index) => {
+      const warning = this.add.circle(x, 205, 10, 0xf0c86a, 0.3).setStrokeStyle(2, 0xffe8a0);
+      this.time.delayedCall(460 + index * 90, () => {
+        warning.destroy();
+        const root = this.add.rectangle(x, 186, 12, 48, 0x5e8b3e).setStrokeStyle(2, 0x283b20);
+        if (
+          this.player &&
+          Math.abs(this.player.x - x) < 13 &&
+          Math.abs(this.player.y - 186) < 42 &&
+          !this.encounterOver
+        )
+          this.damagePlayer(this.time.now);
+        this.time.delayedCall(280, () => root.destroy());
+      });
+    });
+    this.message?.setText('ROOT ERUPTION • WATCH THE GROUND!');
+  }
+
+  private summonMeteors(): void {
+    if (!this.player || !this.boss) return;
+    const targets = [
+      this.player.x,
+      Phaser.Math.Clamp(this.player.x - 55, 24, 232),
+      Phaser.Math.Clamp(this.player.x + 55, 24, 232),
+      Phaser.Math.Between(35, 220),
+    ];
+    targets.forEach((x, index) => {
+      const warning = this.add.circle(x, 205, 9, 0xffc05c, 0.28).setStrokeStyle(2, 0xff6a3d);
+      this.time.delayedCall(320 + index * 130, () => {
+        warning.destroy();
+        this.spawnBossProjectile('boss-meteor', x, 76, 0, 112, 'meteor');
+      });
+    });
+    this.cameras.main.shake(150, 0.005);
+    this.message?.setText('METEOR RAIN • MOVE BETWEEN IMPACT MARKERS!');
+  }
+
+  private spawnBossProjectile(
+    texture: string,
+    x: number,
+    y: number,
+    velocityX: number,
+    velocityY: number,
+    kind = 'shot',
+  ): void {
+    const shot = this.physics.add.sprite(x, y, texture);
+    shot.body.setAllowGravity(false);
+    shot.setVelocity(velocityX, velocityY).setData('kind', kind);
+    this.projectiles.push(shot);
   }
 
   private updateProjectiles(time: number): void {
     if (!this.player) return;
     this.projectiles = this.projectiles.filter((shot) => {
       if (!shot.active) return false;
-      shot.rotation += 0.12;
+      if (shot.getData('kind') !== 'wave') shot.rotation += 0.12;
       if (shot.x < -10 || shot.x > 266 || shot.y < 65 || shot.y > 245) {
         shot.destroy();
         return false;
@@ -276,7 +366,7 @@ export class LocationBossScene extends Phaser.Scene {
   }
 
   private damagePlayer(time: number): void {
-    if (!this.player || !this.save) return;
+    if (!this.player || !this.save || this.encounterOver) return;
     this.invulnerableUntil = time + INVULNERABLE_MS;
     const result = applyDamage(
       {
@@ -423,24 +513,75 @@ export class LocationBossScene extends Phaser.Scene {
   }
 
   private createTextures(): void {
-    ['location-boss-sprite', 'boss-projectile', 'location-crystal'].forEach(
-      (key) => {
-        if (this.textures.exists(key)) this.textures.remove(key);
-      },
-    );
+    [
+      'location-boss-sprite',
+      'boss-projectile',
+      'boss-wave',
+      'boss-meteor',
+      'location-crystal',
+    ].forEach((key) => {
+      if (this.textures.exists(key)) this.textures.remove(key);
+    });
     if (!this.textures.exists('location-boss-sprite')) {
       const boss = this.add.graphics();
-      boss.fillStyle(this.location.bossColor).fillRoundedRect(4, 4, 34, 40, 8);
-      boss.lineStyle(3, 0x17151d).strokeRoundedRect(4, 4, 34, 40, 8);
-      boss.fillStyle(this.location.color).fillCircle(14, 17, 4).fillCircle(28, 17, 4);
-      boss.fillStyle(0x17151d).fillRect(0, 20, 6, 18).fillRect(36, 20, 6, 18);
-      boss.generateTexture('location-boss-sprite', 42, 46).destroy();
+      if (this.location.id === 'hillsboro_west') {
+        boss.fillStyle(this.location.bossColor).fillRoundedRect(8, 8, 38, 43, 7);
+        boss.lineStyle(3, 0x17151d).strokeRoundedRect(8, 8, 38, 43, 7);
+        boss.fillStyle(this.location.color).fillCircle(20, 23, 4).fillCircle(34, 23, 4);
+        boss.fillStyle(0x17151d).fillRect(3, 25, 7, 20).fillRect(44, 25, 7, 20);
+        boss.fillStyle(0x4c382f).fillRect(14, 49, 9, 8).fillRect(32, 49, 9, 8);
+      } else if (this.location.id === 'hillsboro_east') {
+        boss.fillStyle(0x253a62).fillTriangle(27, 2, 48, 25, 39, 52);
+        boss.fillTriangle(27, 2, 6, 25, 15, 52);
+        boss.lineStyle(3, 0x10192d).strokeTriangle(27, 2, 48, 25, 39, 52);
+        boss.strokeTriangle(27, 2, 6, 25, 15, 52);
+        boss.fillStyle(0x72e4ff).fillCircle(20, 23, 5).fillCircle(34, 23, 5);
+        boss.lineStyle(2, 0xffe369).lineBetween(27, 2, 27, 0).lineBetween(8, 40, 0, 48).lineBetween(46, 40, 54, 48);
+      } else if (this.location.id === 'milwaukie') {
+        boss.fillStyle(0x276f82).fillEllipse(27, 30, 50, 43);
+        boss.lineStyle(3, 0x123e4b).strokeEllipse(27, 30, 50, 43);
+        boss.fillStyle(0x9feaff).fillCircle(18, 24, 5).fillCircle(36, 24, 5);
+        boss.fillStyle(0x164d5c).fillEllipse(27, 40, 20, 9);
+        boss.lineStyle(4, 0x4bc7db).lineBetween(5, 28, 0, 15).lineBetween(49, 28, 54, 15);
+        boss.fillStyle(0x5be0ee).fillTriangle(11, 50, 20, 42, 21, 57).fillTriangle(43, 50, 34, 42, 33, 57);
+      } else if (this.location.id === 'walla_walla') {
+        boss.fillStyle(0x5b3c2d).fillRect(19, 13, 18, 43);
+        boss.lineStyle(3, 0x2d211c).strokeRect(19, 13, 18, 43);
+        boss.fillStyle(0x477737).fillCircle(15, 17, 13).fillCircle(39, 17, 13).fillCircle(27, 8, 15);
+        boss.fillStyle(0xf2ca55).fillCircle(21, 23, 4).fillCircle(34, 23, 4);
+        boss.lineStyle(5, 0x477737).lineBetween(20, 31, 5, 44).lineBetween(35, 31, 50, 44);
+        boss.lineStyle(3, 0x6e9b45).lineBetween(23, 54, 14, 60).lineBetween(33, 54, 42, 60);
+      } else {
+        boss.fillStyle(0x3d3034).fillTriangle(27, 1, 52, 20, 46, 55);
+        boss.fillTriangle(27, 1, 2, 20, 8, 55);
+        boss.lineStyle(4, 0x171315).strokeTriangle(27, 1, 52, 20, 46, 55);
+        boss.strokeTriangle(27, 1, 2, 20, 8, 55);
+        boss.fillStyle(0xff5b35).fillCircle(19, 24, 6).fillCircle(36, 24, 6);
+        boss.lineStyle(4, 0xff713b).lineBetween(27, 8, 25, 47).lineBetween(9, 35, 20, 40).lineBetween(45, 35, 34, 40);
+        boss.fillStyle(0xffa13d).fillTriangle(8, 12, 0, 0, 18, 8).fillTriangle(46, 12, 54, 0, 36, 8);
+      }
+      boss.generateTexture('location-boss-sprite', 55, 61).destroy();
     }
     if (!this.textures.exists('boss-projectile')) {
       const shot = this.add.graphics();
       shot.fillStyle(this.location.color).fillCircle(6, 6, 6);
       shot.lineStyle(2, 0xffffff, 0.7).strokeCircle(6, 6, 5);
       shot.generateTexture('boss-projectile', 12, 12).destroy();
+    }
+    if (!this.textures.exists('boss-wave')) {
+      const wave = this.add.graphics();
+      wave.fillStyle(0x3dc4df, 0.88)
+        .fillTriangle(0, 14, 12, 1, 20, 14)
+        .fillTriangle(14, 14, 28, 3, 38, 14);
+      wave.lineStyle(2, 0xb9f5ff).lineBetween(0, 14, 12, 1).lineBetween(12, 1, 20, 14);
+      wave.generateTexture('boss-wave', 38, 15).destroy();
+    }
+    if (!this.textures.exists('boss-meteor')) {
+      const meteor = this.add.graphics();
+      meteor.fillStyle(0x3a2b2d).fillCircle(8, 9, 8);
+      meteor.fillStyle(0xff5b35).fillTriangle(3, 3, 8, 0, 13, 3);
+      meteor.lineStyle(2, 0xffae54).strokeCircle(8, 9, 7);
+      meteor.generateTexture('boss-meteor', 16, 18).destroy();
     }
     if (!this.textures.exists('location-crystal')) {
       const crystal = this.add.graphics();
