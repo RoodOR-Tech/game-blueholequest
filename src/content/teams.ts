@@ -31,7 +31,7 @@ export const TEAMS: readonly TeamDefinition[] = [
     weaponId: 'smart_tech_stun_baton',
     passiveId: 'parental_reflexes',
     startingStats: { attack: 1, magic: 2, life: 3 },
-    productionReady: false,
+    productionReady: true,
   },
   {
     id: 'jason_hilary',
@@ -39,7 +39,7 @@ export const TEAMS: readonly TeamDefinition[] = [
     weaponId: 'river_oak_mash_paddle',
     passiveId: 'riverbank_endurance',
     startingStats: { attack: 2, magic: 1, life: 3 },
-    productionReady: false,
+    productionReady: true,
   },
   {
     id: 'joe_cia',
@@ -47,7 +47,7 @@ export const TEAMS: readonly TeamDefinition[] = [
     weaponId: 'enchanted_oak_pointer',
     passiveId: 'academic_insight',
     startingStats: { attack: 1, magic: 3, life: 2 },
-    productionReady: false,
+    productionReady: true,
   },
   {
     id: 'kris_lea',
@@ -55,7 +55,7 @@ export const TEAMS: readonly TeamDefinition[] = [
     weaponId: 'carabiner_trekking_pole',
     passiveId: 'alpine_trekker',
     startingStats: { attack: 2, magic: 2, life: 2 },
-    productionReady: false,
+    productionReady: true,
   },
 ] as const;
 
@@ -64,4 +64,3 @@ export function getTeam(id: TeamId): TeamDefinition {
   if (!team) throw new Error(`Unknown team: ${id}`);
   return team;
 }
-
