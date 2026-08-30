@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { BUDDA_TEXTURE_KEY, ensureBuddaTexture } from '../actors/budda';
+import { applyTeamAppearance } from '../actors/teamAppearance';
 import { getTeam } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { CHECKPOINTS, saveAtCheckpoint } from '../game/progression/checkpoints';
@@ -158,6 +159,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
       .setScale(DAD_SPRITE_SCALE)
       .setCollideWorldBounds(true)
       .play('dad-idle');
+    if (this.save) applyTeamAppearance(player, this.save.activeTeamId);
     player.body.setSize(210, 500).setOffset(30, 150);
     this.player = player;
   }
