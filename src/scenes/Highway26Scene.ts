@@ -14,12 +14,12 @@ import { TouchControls } from '../ui/TouchControls';
 
 const NODE_X = [28, 78, 128, 178, 228] as const;
 const WORLD_POINTS = [
-  { x: 24, y: 178, label: 'ROCKAWAY' },
-  { x: 65, y: 158, label: 'HILLSBORO W' },
-  { x: 108, y: 174, label: 'HILLSBORO E' },
-  { x: 134, y: 130, label: 'MILWAUKIE' },
-  { x: 166, y: 83, label: 'WALLA WALLA' },
-  { x: 226, y: 57, label: 'BEND' },
+  { x: 42, y: 105, label: 'ROCKAWAY', labelX: 42, labelY: 119 },
+  { x: 78, y: 91, label: 'HILLSBORO W', labelX: 75, labelY: 77 },
+  { x: 98, y: 91, label: 'HILLSBORO E', labelX: 100, labelY: 104 },
+  { x: 111, y: 108, label: 'MILWAUKIE', labelX: 113, labelY: 121 },
+  { x: 196, y: 55, label: 'WALLA WALLA', labelX: 196, labelY: 42 },
+  { x: 158, y: 158, label: 'BEND', labelX: 158, labelY: 172 },
 ] as const;
 
 export class Highway26Scene extends Phaser.Scene {
@@ -269,8 +269,77 @@ export class Highway26Scene extends Phaser.Scene {
   private drawRouteMenu(): void {
     this.clearMap();
     const g = this.graphics!;
-    g.fillStyle(0x2c6a3f).fillRect(13, 35, 230, 164);
-    g.fillStyle(0x2778a8).fillRect(13, 164, 47, 35);
+    // Pacific Ocean and a simplified Oregon / southeast Washington silhouette.
+    g.fillStyle(0x2479a8).fillRect(13, 35, 230, 164);
+    g.fillStyle(0x74a95a).fillPoints(
+      [
+        new Phaser.Geom.Point(32, 37),
+        new Phaser.Geom.Point(235, 37),
+        new Phaser.Geom.Point(237, 188),
+        new Phaser.Geom.Point(71, 190),
+        new Phaser.Geom.Point(57, 178),
+        new Phaser.Geom.Point(51, 157),
+        new Phaser.Geom.Point(45, 139),
+        new Phaser.Geom.Point(39, 121),
+        new Phaser.Geom.Point(35, 96),
+        new Phaser.Geom.Point(32, 72),
+      ],
+      true,
+    );
+    g.lineStyle(2, 0xd7cc91).strokePoints(
+      [
+        new Phaser.Geom.Point(32, 37),
+        new Phaser.Geom.Point(235, 37),
+        new Phaser.Geom.Point(237, 188),
+        new Phaser.Geom.Point(71, 190),
+        new Phaser.Geom.Point(57, 178),
+        new Phaser.Geom.Point(51, 157),
+        new Phaser.Geom.Point(45, 139),
+        new Phaser.Geom.Point(39, 121),
+        new Phaser.Geom.Point(35, 96),
+        new Phaser.Geom.Point(32, 72),
+      ],
+      true,
+    );
+
+    // High desert, Willamette Valley, Coast Range, and Cascade snow belt.
+    g.fillStyle(0xcaa75d).fillPoints(
+      [
+        new Phaser.Geom.Point(150, 71),
+        new Phaser.Geom.Point(235, 63),
+        new Phaser.Geom.Point(237, 188),
+        new Phaser.Geom.Point(142, 188),
+      ],
+      true,
+    );
+    g.fillStyle(0x4f8749).fillRoundedRect(69, 65, 64, 91, 12);
+    g.fillStyle(0x356b42);
+    for (let y = 54; y < 175; y += 22) {
+      g.fillTriangle(47, y + 14, 55, y, 63, y + 14);
+      g.fillTriangle(61, y + 17, 69, y + 3, 77, y + 17);
+    }
+    for (let y = 50; y < 184; y += 24) {
+      g.fillStyle(0x607467).fillTriangle(132, y + 18, 142, y, 152, y + 18);
+      g.fillStyle(0xe8f2eb).fillTriangle(137, y + 9, 142, y, 147, y + 9);
+    }
+
+    // Columbia and Willamette rivers.
+    g.lineStyle(5, 0x2f8fc0);
+    g.beginPath();
+    g.moveTo(35, 48);
+    g.lineTo(111, 48);
+    g.lineTo(149, 54);
+    g.lineTo(235, 49);
+    g.strokePath();
+    g.lineStyle(4, 0x2f8fc0);
+    g.beginPath();
+    g.moveTo(111, 48);
+    g.lineTo(108, 80);
+    g.lineTo(112, 112);
+    g.lineTo(104, 151);
+    g.strokePath();
+
+    // Connected expedition road.
     g.lineStyle(5, 0x76583c);
     g.beginPath();
     g.moveTo(WORLD_POINTS[0].x, WORLD_POINTS[0].y);
@@ -292,15 +361,35 @@ export class Highway26Scene extends Phaser.Scene {
       );
       this.labels.push(
         this.add
-          .text(point.x, point.y - 13, point.label, {
+          .text(point.labelX, point.labelY, point.label, {
             align: 'center',
+            backgroundColor: '#08111dcc',
             color: '#ffffff',
             fontFamily: 'monospace',
             fontSize: '4px',
+            padding: { x: 2, y: 1 },
           })
           .setOrigin(0.5),
       );
     });
+    this.labels.push(
+      this.add.text(17, 181, 'PACIFIC', {
+        color: '#d8f2ff',
+        fontFamily: 'monospace',
+        fontSize: '4px',
+      }),
+      this.add.text(178, 183, 'HIGH DESERT', {
+        color: '#644c2b',
+        fontFamily: 'monospace',
+        fontSize: '4px',
+      }),
+      this.add.text(137, 191, 'OREGON', {
+        color: '#fff1b5',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+        fontStyle: 'bold',
+      }),
+    );
     const route = LOCATION_ROUTES[this.routeIndex];
     this.heading?.setText('THE CONNECTED QUEST MAP');
     this.message?.setText(
