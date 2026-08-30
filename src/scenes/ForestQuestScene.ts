@@ -5,6 +5,7 @@ import { PhaserInput } from '../game/input/PhaserInput';
 import { awardForestRelic } from '../game/progression/forestReward';
 import { LANTERN_ITEM_ID } from '../game/progression/routeRules';
 import {
+  prepareCheckpointRetry,
   recoverFromGameOver,
   resolveKnockout,
 } from '../game/progression/lives';
@@ -114,10 +115,13 @@ export class ForestQuestScene extends Phaser.Scene {
     this.lanternGlow?.setPosition(this.player.x, this.player.y);
 
     if (this.questComplete) {
-      this.player.setVelocityX(0).play('dad-idle', true);
+      this.player.setVelocityX(0);
+      if (!this.knockedOut) this.player.play('dad-idle', true);
       if (
         this.controls.actions.get('confirm').pressed ||
-        this.controls.actions.get('cancel').pressed
+        this.controls.actions.get('cancel').pressed ||
+        this.controls.actions.get('jump').pressed ||
+        this.controls.actions.get('attack').pressed
       ) {
         if (this.knockedOut) {
           if (this.gameOver) {
@@ -127,7 +131,14 @@ export class ForestQuestScene extends Phaser.Scene {
             );
             this.repository.save(this.save);
             this.scene.start('blue-hole-hub');
-          } else this.scene.restart();
+          } else {
+            this.save = prepareCheckpointRetry(
+              this.save,
+              new Date().toISOString(),
+            );
+            this.repository.save(this.save);
+            this.scene.restart();
+          }
         } else
           this.scene.start(this.retreating ? 'highway-26' : 'blue-hole-hub');
       }
@@ -279,7 +290,9 @@ export class ForestQuestScene extends Phaser.Scene {
     this.repository.save(this.save);
     this.player.setVelocity(direction * 88, -95).setTintFill(0xff6655);
     this.cameras.main.shake(100, 0.005);
-    this.time.delayedCall(180, () => this.player?.clearTint());
+    this.time.delayedCall(180, () => {
+      if (!this.knockedOut) this.player?.clearTint();
+    });
     this.refreshStatus();
     if (result.defeated) {
       const knockout = resolveKnockout(this.save, new Date().toISOString());
@@ -288,6 +301,11 @@ export class ForestQuestScene extends Phaser.Scene {
       this.questComplete = true;
       this.knockedOut = true;
       this.gameOver = knockout.gameOver;
+      this.player
+        .setVelocity(0, 0)
+        .setAngle(90)
+        .setAlpha(0.7)
+        .setTint(0xb94b4b);
       this.message?.setText(
         knockout.gameOver
           ? 'GAME OVER • ENTER / A: RECOVER HOME (-25% EXP)'
@@ -420,4 +438,3 @@ export class ForestQuestScene extends Phaser.Scene {
     }
   }
 }
-
