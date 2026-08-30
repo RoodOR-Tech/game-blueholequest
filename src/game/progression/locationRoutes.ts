@@ -19,6 +19,7 @@ export interface RouteEvent {
 
 export interface LocationRoute {
   readonly locationId: BossLocationId;
+  readonly origin: string;
   readonly label: string;
   readonly events: readonly [RouteEvent, RouteEvent, RouteEvent];
 }
@@ -56,6 +57,7 @@ const event = (
 export const LOCATION_ROUTES: readonly LocationRoute[] = [
   {
     locationId: 'hillsboro_west',
+    origin: 'ROCKAWAY BEACH',
     label: 'HILLSBORO WEST ROUTE',
     events: [
       event('flooded_underpass', 'calamity', 'FLOODED UNDERPASS', 'Storm water covers the road ahead.', 'WADE THROUGH', 'CLIMB THE EMBANKMENT'),
@@ -65,6 +67,7 @@ export const LOCATION_ROUTES: readonly LocationRoute[] = [
   },
   {
     locationId: 'hillsboro_east',
+    origin: 'HILLSBORO WEST',
     label: 'HILLSBORO EAST ROUTE',
     events: [
       event('ice_storm', 'calamity', 'ICE STORM', 'Freezing rain turns the route into glass.', 'CROSS QUICKLY', 'WAIT UNDER COVER'),
@@ -74,6 +77,7 @@ export const LOCATION_ROUTES: readonly LocationRoute[] = [
   },
   {
     locationId: 'milwaukie',
+    origin: 'HILLSBORO EAST',
     label: 'MILWAUKIE ROUTE',
     events: [
       event('river_flood', 'calamity', 'WILLAMETTE FLOOD', 'The river has surged across the low road.', 'FORD THE WATER', 'BUILD A RAFT'),
@@ -83,6 +87,7 @@ export const LOCATION_ROUTES: readonly LocationRoute[] = [
   },
   {
     locationId: 'walla_walla',
+    origin: 'MILWAUKIE',
     label: 'WALLA WALLA ROUTE',
     events: [
       event('dust_storm', 'calamity', 'DUST STORM', 'A wall of dust erases the horizon.', 'PRESS FORWARD', 'MAKE A SHELTER'),
@@ -92,6 +97,7 @@ export const LOCATION_ROUTES: readonly LocationRoute[] = [
   },
   {
     locationId: 'bend',
+    origin: 'WALLA WALLA',
     label: 'BEND ROUTE',
     events: [
       event('wildfire_smoke', 'calamity', 'WILDFIRE SMOKE', 'Smoke rolls across the high desert.', 'RUN THE CLEARING', 'WRAP UP AND WAIT'),
