@@ -40,6 +40,7 @@ export class LodgeQuestScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.resetEncounterState();
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
@@ -68,6 +69,19 @@ export class LodgeQuestScene extends Phaser.Scene {
     this.boss.body.setAllowGravity(false);
     this.createHud();
     this.message?.setText('CAMP 18 LODGE • THE KEG GOLEM HAS THE AMBER STEIN');
+  }
+
+  private resetEncounterState(): void {
+    this.bossHealth = { current: 6, maximum: 6 };
+    this.barrels = [];
+    this.facing.set(1, 0);
+    this.nextAttackAt = 0;
+    this.attackingUntil = 0;
+    this.nextBarrelAt = 900;
+    this.invulnerableUntil = 0;
+    this.encounterOver = false;
+    this.knockedOut = false;
+    this.gameOver = false;
   }
 
   update(time: number): void {
