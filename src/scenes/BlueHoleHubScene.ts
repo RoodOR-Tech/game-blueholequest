@@ -181,10 +181,13 @@ export class BlueHoleHubScene extends Phaser.Scene {
     this.message = this.add
       .text(128, 203, 'WELCOME HOME. THE HEARTH AWAITS FIVE RELICS.', {
         align: 'center',
+        backgroundColor: '#08111dee',
         color: '#f6d77a',
         fontFamily: 'monospace',
-        fontSize: '6px',
-        wordWrap: { width: 232 },
+        fontSize: '7px',
+        lineSpacing: 2,
+        padding: { x: 8, y: 6 },
+        wordWrap: { width: 220, useAdvancedWrap: true },
       })
       .setOrigin(0.5);
   }
@@ -231,7 +234,9 @@ export class BlueHoleHubScene extends Phaser.Scene {
       this.save = discoverBudda(this.save, 'rockaway', new Date().toISOString());
       this.repository.save(this.save);
       const count = foundBuddaCount(this.save);
-      this.message.setText(`BUDDA: ${BUDDA_ENCOUNTERS.rockaway.line} • ${BUDDA_ENCOUNTERS.rockaway.reward} • ${count}/6 FOUND`);
+      this.message.setText(
+        `BUDDA THE GINGER CAT\n“${BUDDA_ENCOUNTERS.rockaway.line}”\nREWARD: ${BUDDA_ENCOUNTERS.rockaway.reward}  •  FOUND ${count}/6`,
+      );
       this.refreshHud();
       return;
     }
