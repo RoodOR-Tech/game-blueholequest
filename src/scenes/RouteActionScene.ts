@@ -163,7 +163,9 @@ export class RouteActionScene extends Phaser.Scene {
     this.repository.save(this.save);
     const encounter = BUDDA_ENCOUNTERS[this.locationId];
     const completed = this.save.inventory.includes(BUDDA_ACHIEVEMENT);
-    this.message.setText(`BUDDA: ${encounter.line} • ${encounter.reward} • ${foundBuddaCount(this.save)}/6 FOUND${completed ? ' • NINE BUZZED LIVES UNLOCKED!' : ''}`);
+    this.message.setText(
+      `BUDDA THE GINGER CAT\n“${encounter.line}”\nREWARD: ${encounter.reward}  •  FOUND ${foundBuddaCount(this.save)}/6${completed ? '\nNINE BUZZED LIVES UNLOCKED!' : ''}`,
+    );
     this.budda.setTint(0xf6d77a);
     this.refreshHud();
   }
@@ -467,11 +469,13 @@ export class RouteActionScene extends Phaser.Scene {
     this.message = this.add
       .text(128, 47, `${this.definition.terrain} • REACH THE ROUTE MARKER`, {
         align: 'center',
-        backgroundColor: '#08111ddd',
+        backgroundColor: '#08111df2',
         color: '#f6d77a',
         fontFamily: 'monospace',
-        fontSize: '6px',
-        padding: { x: 5, y: 3 },
+        fontSize: '7px',
+        lineSpacing: 2,
+        padding: { x: 8, y: 6 },
+        wordWrap: { width: 220, useAdvancedWrap: true },
       })
       .setScrollFactor(0)
       .setOrigin(0.5);
