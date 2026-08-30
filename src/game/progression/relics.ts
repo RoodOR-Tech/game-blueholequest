@@ -1,6 +1,6 @@
 import { BOSS_LOCATIONS } from './bossLocations';
 
-export const RELIC_IDS = BOSS_LOCATIONS.map((location) => location.crystalId);
+export const RELIC_IDS = BOSS_LOCATIONS.map((location) => location.artifactId);
 
 export type RelicId = (typeof RELIC_IDS)[number];
 
