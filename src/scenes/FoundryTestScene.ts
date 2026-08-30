@@ -4,6 +4,7 @@ import { applyDamage, type HealthState } from '../game/combat/damage';
 import { awardFoundryVictory } from '../game/combat/foundryReward';
 import { PhaserInput } from '../game/input/PhaserInput';
 import {
+  prepareCheckpointRetry,
   recoverFromGameOver,
   resolveKnockout,
 } from '../game/progression/lives';
@@ -135,10 +136,13 @@ export class FoundryTestScene extends Phaser.Scene {
     this.controls.update(this.input.gamepad?.getPad(0));
 
     if (this.combatOver) {
-      this.player.setVelocityX(0).play('dad-idle', true);
+      this.player.setVelocityX(0);
+      if (!this.knockedOut) this.player.play('dad-idle', true);
       if (
         this.controls.actions.get('confirm').pressed ||
-        this.controls.actions.get('cancel').pressed
+        this.controls.actions.get('cancel').pressed ||
+        this.controls.actions.get('jump').pressed ||
+        this.controls.actions.get('attack').pressed
       ) {
         if (this.knockedOut) {
           if (this.gameOver) {
@@ -148,7 +152,14 @@ export class FoundryTestScene extends Phaser.Scene {
             );
             this.repository.save(this.save);
             this.scene.start('blue-hole-hub');
-          } else this.scene.restart();
+          } else {
+            this.save = prepareCheckpointRetry(
+              this.save,
+              new Date().toISOString(),
+            );
+            this.repository.save(this.save);
+            this.scene.restart();
+          }
         } else this.scene.start('blue-hole-hub');
       }
       return;
@@ -243,7 +254,9 @@ export class FoundryTestScene extends Phaser.Scene {
     this.repository.save(this.save);
     this.player.setVelocity(knockbackDirection * 92, -92).setTintFill(0xff6b55);
     this.cameras.main.shake(110, 0.006);
-    this.time.delayedCall(180, () => this.player?.clearTint());
+    this.time.delayedCall(180, () => {
+      if (!this.knockedOut) this.player?.clearTint();
+    });
     this.refreshPlayerHealth();
 
     if (result.defeated) {
@@ -254,6 +267,11 @@ export class FoundryTestScene extends Phaser.Scene {
       this.knockedOut = true;
       this.gameOver = knockout.gameOver;
       this.drone?.setVelocityX(0);
+      this.player
+        .setVelocity(0, 0)
+        .setAngle(90)
+        .setAlpha(0.7)
+        .setTint(0xb94b4b);
       this.message?.setText(
         knockout.gameOver
           ? 'GAME OVER • ENTER / A: RECOVER HOME (-25% EXP)'
