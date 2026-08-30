@@ -146,6 +146,6 @@ export function routeForLocation(locationId: BossLocationId): LocationRoute {
 
 export function completedRouteCount(relics: readonly string[]): number {
   return BOSS_LOCATIONS.filter((location) =>
-    relics.includes(location.crystalId),
+    relics.includes(location.artifactId),
   ).length;
 }
