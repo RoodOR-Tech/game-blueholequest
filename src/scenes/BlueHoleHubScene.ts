@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { getTeam } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
+import { CHECKPOINTS, saveAtCheckpoint } from '../game/progression/checkpoints';
 import { recoveredRelicCount, RELIC_IDS } from '../game/progression/relics';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
@@ -45,6 +46,12 @@ export class BlueHoleHubScene extends Phaser.Scene {
       this.scene.start('team-select');
       return;
     }
+    this.save = saveAtCheckpoint(
+      this.save,
+      CHECKPOINTS.home,
+      new Date().toISOString(),
+    );
+    this.repository.save(this.save);
 
     this.drawRoom();
     this.controls = new PhaserInput(this);
