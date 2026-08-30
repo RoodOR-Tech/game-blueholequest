@@ -4,19 +4,22 @@ import {
   WILSON_RIVER_CHOICES,
 } from '../game/calamities/wilsonRiver';
 import { PhaserInput } from '../game/input/PhaserInput';
+import {
+  BOSS_LOCATIONS,
+  isLocationUnlocked,
+} from '../game/progression/bossLocations';
 import { recoverFromGameOver } from '../game/progression/lives';
-import { highway26GateMessage } from '../game/progression/routeRules';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
 
 const ROUTE = [
-  { x: 27, y: 184, label: 'ROCKAWAY' },
-  { x: 63, y: 171, label: 'COAST' },
-  { x: 98, y: 145, label: 'FOREST' },
-  { x: 135, y: 126, label: 'PASS' },
-  { x: 174, y: 102, label: 'HWY 26' },
-  { x: 217, y: 78, label: 'HILLSBORO' },
+  { x: 25, y: 190, label: 'ROCKAWAY', locationId: null },
+  { x: 65, y: 165, label: 'HILLSBORO W', locationId: 'hillsboro_west' },
+  { x: 105, y: 140, label: 'HILLSBORO E', locationId: 'hillsboro_east' },
+  { x: 145, y: 119, label: 'MILWAUKIE', locationId: 'milwaukie' },
+  { x: 186, y: 94, label: 'WALLA WALLA', locationId: 'walla_walla' },
+  { x: 228, y: 70, label: 'BEND', locationId: 'bend' },
 ] as const;
 
 export class Highway26Scene extends Phaser.Scene {
@@ -89,21 +92,9 @@ export class Highway26Scene extends Phaser.Scene {
       return;
     }
 
-    if (this.routeIndex === 2 && this.controls.actions.get('confirm').pressed) {
-      this.scene.start('forest-quest');
-      return;
-    }
-
-    if (this.routeIndex === 3 && this.controls.actions.get('confirm').pressed) {
-      this.scene.start('lodge-quest');
-      return;
-    }
-
-    if (
-      this.routeIndex === ROUTE.length - 1 &&
-      this.controls.actions.get('confirm').pressed
-    ) {
-      this.scene.start('foundry-test');
+    const selectedLocation = ROUTE[this.routeIndex]?.locationId;
+    if (selectedLocation && this.controls.actions.get('confirm').pressed) {
+      this.scene.start('location-boss', { locationId: selectedLocation });
       return;
     }
 
@@ -114,13 +105,12 @@ export class Highway26Scene extends Phaser.Scene {
       this.routeIndex < ROUTE.length - 1;
     if (advancing) {
       const targetIndex = this.routeIndex + 1;
-      const gateMessage = highway26GateMessage(
-        targetIndex,
-        this.save.inventory,
-        this.save.relics,
-      );
-      if (gateMessage) {
-        this.locationText?.setText(gateMessage);
+      const locationIndex = targetIndex - 1;
+      if (!isLocationUnlocked(locationIndex, this.save.relics)) {
+        const previous = BOSS_LOCATIONS[locationIndex - 1];
+        this.locationText?.setText(
+          `RECOVER THE ${previous?.crystalName ?? 'PREVIOUS CRYSTAL'} FIRST`,
+        );
         this.cameras.main.shake(100, 0.003);
       } else {
         this.routeIndex = targetIndex;
@@ -164,16 +154,16 @@ export class Highway26Scene extends Phaser.Scene {
     graphics.strokePath();
     graphics.lineStyle(2, 0xf0d492).strokePath();
     ROUTE.forEach((point, index) => {
+      const location = index > 0 ? BOSS_LOCATIONS[index - 1] : undefined;
       const completed =
-        (index === 2 && this.save?.relics.includes('relic_golden_thumb')) ||
-        (index === 3 && this.save?.relics.includes('relic_amber_stein')) ||
-        (index === 5 && this.save?.relics.includes('relic_crystal_hound'));
+        location !== undefined &&
+        this.save?.relics.includes(location.crystalId);
       graphics
         .fillStyle(completed ? 0xf6d77a : 0x102b3f)
         .fillCircle(point.x, point.y, completed ? 5 : 4);
     });
 
-    this.add.text(10, 10, 'HIGHWAY 26 • COAST RANGE', {
+    this.add.text(10, 10, 'THE CRYSTAL ROUTE', {
       color: '#f6d77a',
       fontFamily: 'monospace',
       fontSize: '9px',
@@ -184,7 +174,7 @@ export class Highway26Scene extends Phaser.Scene {
       fontFamily: 'monospace',
       fontSize: '6px',
     });
-    this.add.text(10, 191, 'GOLD STOPS: RELIC RECOVERED', {
+    this.add.text(10, 205, 'GOLD STOPS: CRYSTAL RECOVERED', {
       color: '#6a4b2f',
       fontFamily: 'monospace',
       fontSize: '5px',
@@ -313,14 +303,11 @@ export class Highway26Scene extends Phaser.Scene {
     if (!point || !this.locationText) return;
     if (this.routeIndex === 0) {
       this.locationText.setText('ROCKAWAY BEACH • ESC TO RETURN HOME');
-    } else if (this.routeIndex === ROUTE.length - 1) {
-      this.locationText.setText('HILLSBORO WEST • ENTER / A: ENTER FOUNDRY');
-    } else if (this.routeIndex === 2) {
-      this.locationText.setText('COAST RANGE FOREST • ENTER / A: EXPLORE');
-    } else if (this.routeIndex === 3) {
-      this.locationText.setText('CAMP 18 LODGE • ENTER / A: INVESTIGATE');
     } else {
-      this.locationText.setText(`${point.label} • KEEP TRAVELING EAST`);
+      const location = BOSS_LOCATIONS[this.routeIndex - 1];
+      this.locationText.setText(
+        `${location?.label ?? point.label} • ENTER / A: BOSS FIGHT`,
+      );
     }
   }
 }
