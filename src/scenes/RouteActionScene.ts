@@ -32,6 +32,8 @@ export class RouteActionScene extends Phaser.Scene {
   private controls?: PhaserInput;
   private player?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private enemies: ActionEnemy[] = [];
+  private mechanicZones: Phaser.GameObjects.Arc[] = [];
+  private windLines: Phaser.GameObjects.Line[] = [];
   private message?: Phaser.GameObjects.Text;
   private hud?: Phaser.GameObjects.Text;
   private facing: -1 | 1 = 1;
@@ -94,6 +96,7 @@ export class RouteActionScene extends Phaser.Scene {
     this.definition.flyingEnemyXs.forEach((x) =>
       this.spawnEnemy(x, 145, true),
     );
+    this.createEnvironmentMechanic();
     this.createHud();
   }
 
@@ -137,12 +140,15 @@ export class RouteActionScene extends Phaser.Scene {
       else this.player.play(horizontal ? 'dad-walk' : 'dad-idle', true);
     }
     this.updateEnemies(time);
+    this.updateEnvironmentMechanic(time);
     if (this.player.x >= 482) this.completeSequence();
     if (this.controls.actions.get('cancel').pressed) this.returnToRoute();
   }
 
   private resetState(): void {
     this.enemies = [];
+    this.mechanicZones = [];
+    this.windLines = [];
     this.facing = 1;
     this.nextAttackAt = 0;
     this.attackingUntil = 0;
@@ -187,6 +193,112 @@ export class RouteActionScene extends Phaser.Scene {
       health: { current: flying ? 1 : 2, maximum: flying ? 1 : 2 },
       originY: y,
     });
+  }
+
+  private createEnvironmentMechanic(): void {
+    const zoneXs =
+      this.eventIndex === 1 ? [126, 286, 420] : [168, 330, 448];
+    if (this.locationId === 'hillsboro_west') {
+      this.mechanicZones = zoneXs.map((x) =>
+        this.add
+          .circle(x, 211, 14, 0x8e3f73, 0.45)
+          .setStrokeStyle(2, 0xd782bd),
+      );
+      this.add.text(15, 64, 'PURPLE VINES SLOW YOUR MOVEMENT', {
+        color: '#ffd0ee',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      });
+    } else if (this.locationId === 'hillsboro_east') {
+      this.mechanicZones = zoneXs.map((x) =>
+        this.add
+          .circle(x, 207, 10, 0xffdd55, 0.28)
+          .setStrokeStyle(2, 0xfff2a1),
+      );
+      zoneXs.forEach((x) =>
+        this.add.rectangle(x, 190, 3, 34, 0xffdf55).setAlpha(0.75),
+      );
+      this.add.text(15, 64, 'POWER POSTS FLASH BEFORE THEY ARC', {
+        color: '#fff2a1',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      });
+    } else if (this.locationId === 'milwaukie') {
+      this.mechanicZones = zoneXs.map((x) =>
+        this.add
+          .circle(x, 213, 18, 0x3db6d1, 0.48)
+          .setStrokeStyle(2, 0x9deafa),
+      );
+      this.add.text(15, 64, 'BLUE CURRENT POOLS PUSH YOU BACK', {
+        color: '#b8f3ff',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      });
+    } else if (this.locationId === 'walla_walla') {
+      this.windLines = [88, 116, 144, 172].map((y, index) =>
+        this.add
+          .line(0, 0, 120 + index * 44, y, 173 + index * 44, y, 0xffe59a, 0.75)
+          .setOrigin(0, 0),
+      );
+      this.add.text(15, 64, 'WATCH THE GUSTS • LEAN INTO THE WIND', {
+        color: '#fff1ba',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      });
+    } else {
+      this.mechanicZones = zoneXs.map((x) =>
+        this.add
+          .circle(x, 211, 12, 0xff542f, 0.46)
+          .setStrokeStyle(2, 0xffc16b),
+      );
+      zoneXs.forEach((x) =>
+        this.add.triangle(x, 207, 0, 12, 7, 0, 14, 12, 0xff8a3d, 0.8),
+      );
+      this.add.text(15, 64, 'LAVA VENTS GLOW BEFORE THEY ERUPT', {
+        color: '#ffd09a',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      });
+    }
+  }
+
+  private updateEnvironmentMechanic(time: number): void {
+    if (!this.player || this.sequenceOver) return;
+    const touchingZone = this.mechanicZones.find(
+      (zone) =>
+        Math.abs(this.player!.x - zone.x) < zone.radius + 8 &&
+        Math.abs(this.player!.y - zone.y) < 30,
+    );
+    if (this.locationId === 'hillsboro_west' && touchingZone) {
+      this.player.setVelocityX(this.player.body.velocity.x * 0.42);
+      touchingZone.setAlpha(0.85);
+    } else if (this.locationId === 'hillsboro_east') {
+      const striking = time % 1600 > 1270;
+      this.mechanicZones.forEach((zone) =>
+        zone.setFillStyle(0xffdd55, striking ? 0.95 : 0.25),
+      );
+      if (striking && touchingZone && time >= this.invulnerableUntil)
+        this.damagePlayer(time, this.player.x < touchingZone.x ? -1 : 1);
+    } else if (this.locationId === 'milwaukie' && touchingZone) {
+      this.player.setVelocityX(this.player.body.velocity.x - 34);
+      touchingZone.setAlpha(0.8);
+    } else if (this.locationId === 'walla_walla') {
+      const gusting = time % 2300 > 1580;
+      this.windLines.forEach((line, index) => {
+        line.setAlpha(gusting ? 0.9 : 0.18);
+        line.x = ((time / 5 + index * 91) % 560) - 40;
+      });
+      if (gusting) this.player.setVelocityX(this.player.body.velocity.x - 38);
+    } else if (this.locationId === 'bend') {
+      const erupting = time % 1900 > 1450;
+      this.mechanicZones.forEach((zone) =>
+        zone
+          .setScale(erupting ? 1.45 : 1)
+          .setFillStyle(0xff542f, erupting ? 0.95 : 0.38),
+      );
+      if (erupting && touchingZone && time >= this.invulnerableUntil)
+        this.damagePlayer(time, this.player.x < touchingZone.x ? -1 : 1);
+    }
   }
 
   private updateEnemies(time: number): void {
