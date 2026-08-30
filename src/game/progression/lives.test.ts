@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { createNewSave } from '../saves/schema';
-import { recoverFromGameOver, resolveKnockout } from './lives';
+import {
+  prepareCheckpointRetry,
+  recoverFromGameOver,
+  resolveKnockout,
+} from './lives';
 
 describe('limited lives', () => {
   it('starts a new game with three lives', () => {
     expect(createNewSave('dad_paula').resources.lives).toBe(3);
   });
 
-  it('consumes a life and restores health for a retry', () => {
+  it('consumes a life and stays at zero health until retry', () => {
     const result = resolveKnockout(createNewSave('dad_paula'), 'knockout');
     expect(result.gameOver).toBe(false);
-    expect(result.save.resources).toMatchObject({ life: 6, lives: 2 });
+    expect(result.save.resources).toMatchObject({ life: 0, lives: 2 });
+    expect(prepareCheckpointRetry(result.save, 'retry').resources.life).toBe(6);
   });
 
   it('reaches game over on the final life', () => {
@@ -38,4 +43,3 @@ describe('limited lives', () => {
     expect(recovered.checkpointId).toBe('rockaway_blue_hole');
   });
 });
-
