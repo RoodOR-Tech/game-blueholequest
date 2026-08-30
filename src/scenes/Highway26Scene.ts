@@ -82,7 +82,7 @@ export class Highway26Scene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const firstIncomplete = BOSS_LOCATIONS.findIndex(
-      (location) => !this.save?.relics.includes(location.crystalId),
+      (location) => !this.save?.relics.includes(location.artifactId),
     );
     this.routeIndex =
       this.requestedRouteIndex ??
@@ -380,7 +380,7 @@ export class Highway26Scene extends Phaser.Scene {
         index === 0 ||
         Boolean(
           BOSS_LOCATIONS[index - 1] &&
-            this.save?.relics.includes(BOSS_LOCATIONS[index - 1]!.crystalId),
+            this.save?.relics.includes(BOSS_LOCATIONS[index - 1]!.artifactId),
         );
       const current = index === this.routeIndex;
       g.fillStyle(completed ? 0xf6d77a : 0x17374c).fillCircle(
@@ -458,7 +458,7 @@ export class Highway26Scene extends Phaser.Scene {
       .circle(NODE_X[0], this.nodeY(0), 4, 0xffffff)
       .setStrokeStyle(2, 0x08111d);
     this.labels.push(
-      this.add.text(197, 60, 'BOSS + CRYSTAL', {
+      this.add.text(197, 60, 'BOSS + ARTIFACT', {
         color: '#7b2929',
         fontFamily: 'monospace',
         fontSize: '5px',
