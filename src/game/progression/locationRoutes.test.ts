@@ -8,6 +8,13 @@ describe('five destination routes', () => {
       expect(route.events.filter((event) => event.kind === 'calamity')).toHaveLength(1);
       expect(route.events.filter((event) => event.kind === 'environment')).toHaveLength(2);
     });
+    expect(LOCATION_ROUTES.map((route) => route.origin)).toEqual([
+      'ROCKAWAY BEACH',
+      'HILLSBORO WEST',
+      'HILLSBORO EAST',
+      'MILWAUKIE',
+      'WALLA WALLA',
+    ]);
   });
 
   it('applies choice costs and life-loss risk', () => {
