@@ -5,7 +5,7 @@ import {
 } from '../game/calamities/wilsonRiver';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { recoverFromGameOver } from '../game/progression/lives';
-import { isHighway26FogGateBlocked } from '../game/progression/routeRules';
+import { highway26GateMessage } from '../game/progression/routeRules';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
@@ -114,10 +114,13 @@ export class Highway26Scene extends Phaser.Scene {
       this.routeIndex < ROUTE.length - 1;
     if (advancing) {
       const targetIndex = this.routeIndex + 1;
-      if (isHighway26FogGateBlocked(targetIndex, this.save.inventory)) {
-        this.locationText?.setText(
-          'COASTAL FOG BLOCKS THE PASS • FIND THE COLEMAN LANTERN',
-        );
+      const gateMessage = highway26GateMessage(
+        targetIndex,
+        this.save.inventory,
+        this.save.relics,
+      );
+      if (gateMessage) {
+        this.locationText?.setText(gateMessage);
         this.cameras.main.shake(100, 0.003);
       } else {
         this.routeIndex = targetIndex;
