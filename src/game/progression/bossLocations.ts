@@ -105,6 +105,7 @@ export function awardLocationCrystal(
       [`boss_${location.id}_defeated`]: true,
       [`crystal_${location.id}_recovered`]: true,
     },
+    checkpointId: 'connected_quest_route',
     savedAt,
   };
 }
