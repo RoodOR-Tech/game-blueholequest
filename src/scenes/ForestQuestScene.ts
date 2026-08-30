@@ -52,6 +52,7 @@ export class ForestQuestScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.resetEncounterState();
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
@@ -107,6 +108,21 @@ export class ForestQuestScene extends Phaser.Scene {
       this.questComplete = true;
       this.retreating = true;
     }
+  }
+
+  private resetEncounterState(): void {
+    this.enemies = [];
+    this.brambles = [];
+    this.facing = 1;
+    this.lastGroundedAt = 0;
+    this.jumpBufferedUntil = 0;
+    this.nextAttackAt = 0;
+    this.attackingUntil = 0;
+    this.invulnerableUntil = 0;
+    this.questComplete = false;
+    this.retreating = false;
+    this.knockedOut = false;
+    this.gameOver = false;
   }
 
   update(time: number): void {
@@ -237,14 +253,21 @@ export class ForestQuestScene extends Phaser.Scene {
       const distance = this.player!.x - enemy.sprite.x;
       if (enemy.kind === 'beetle') {
         const direction = Math.sin(time / 800) >= 0 ? 1 : -1;
-        enemy.sprite.setVelocityX(direction * 24).setFlipX(direction < 0);
+        enemy.sprite
+          .setVelocityX(direction * 24)
+          .setFlipX(direction < 0)
+          .setAngle(Math.sin(time / 90) * 7);
+        if (Math.abs(distance) < 52) enemy.sprite.setTint(0xffb34d);
+        else enemy.sprite.clearTint();
       } else if (enemy.kind === 'owl') {
         enemy.sprite.y =
           enemy.originX === 310
             ? 150 + Math.sin(time / 280) * 17
             : enemy.sprite.y;
         if (Math.abs(distance) < 78)
-          enemy.sprite.setVelocityX(Math.sign(distance) * 36);
+          enemy.sprite
+            .setVelocityX(Math.sign(distance) * 36)
+            .setAngle(Math.sin(time / 120) * 12);
       } else {
         enemy.sprite.setVelocityX(
           Math.abs(distance) < 105 ? Math.sign(distance) * 18 : 0,
@@ -342,7 +365,10 @@ export class ForestQuestScene extends Phaser.Scene {
     health: number,
   ): void {
     const sprite = this.physics.add.sprite(x, y, `forest-${kind}`);
-    sprite.setCollideWorldBounds(true).setImmovable(true);
+    sprite
+      .setScale(kind === 'warden' ? 1 : 1.25)
+      .setCollideWorldBounds(true)
+      .setImmovable(true);
     sprite.body.setAllowGravity(false);
     this.enemies.push({
       kind,
@@ -415,18 +441,28 @@ export class ForestQuestScene extends Phaser.Scene {
   private createTextures(): void {
     if (!this.textures.exists('forest-beetle')) {
       const beetle = this.add.graphics();
-      beetle.fillStyle(0x18211c).fillEllipse(8, 7, 15, 10);
-      beetle.fillStyle(0xe08a3d).fillRect(6, 4, 4, 6);
-      beetle.lineStyle(1, 0xc8d6c8).lineBetween(1, 11, 15, 11);
-      beetle.generateTexture('forest-beetle', 16, 13).destroy();
+      beetle.lineStyle(2, 0x171a18);
+      beetle
+        .lineBetween(5, 11, 1, 15)
+        .lineBetween(10, 12, 8, 17)
+        .lineBetween(15, 12, 17, 17)
+        .lineBetween(20, 11, 24, 15)
+        .lineBetween(5, 5, 1, 1)
+        .lineBetween(20, 5, 24, 1);
+      beetle.fillStyle(0x2a3028).fillEllipse(13, 9, 22, 14);
+      beetle.fillStyle(0xc95f32).fillEllipse(13, 8, 12, 10);
+      beetle.fillStyle(0xffd45c).fillCircle(6, 7, 2).fillCircle(20, 7, 2);
+      beetle.generateTexture('forest-beetle', 26, 18).destroy();
     }
     if (!this.textures.exists('forest-owl')) {
       const owl = this.add.graphics();
-      owl.fillStyle(0xa57a4b).fillTriangle(0, 8, 10, 1, 8, 14);
-      owl.fillTriangle(20, 8, 10, 1, 12, 14);
-      owl.fillStyle(0xf0d18b).fillCircle(10, 8, 6);
-      owl.fillStyle(0x11181b).fillCircle(8, 7, 1).fillCircle(12, 7, 1);
-      owl.generateTexture('forest-owl', 20, 15).destroy();
+      owl.fillStyle(0x765034).fillTriangle(0, 10, 13, 1, 9, 19);
+      owl.fillTriangle(26, 10, 13, 1, 17, 19);
+      owl.fillStyle(0xd0a65f).fillCircle(13, 10, 8);
+      owl.fillStyle(0xf7df92).fillCircle(9, 9, 4).fillCircle(17, 9, 4);
+      owl.fillStyle(0xb53e31).fillCircle(9, 9, 2).fillCircle(17, 9, 2);
+      owl.fillStyle(0xe6a33d).fillTriangle(11, 13, 15, 13, 13, 17);
+      owl.generateTexture('forest-owl', 26, 20).destroy();
     }
     if (!this.textures.exists('forest-warden')) {
       const warden = this.add.graphics();
