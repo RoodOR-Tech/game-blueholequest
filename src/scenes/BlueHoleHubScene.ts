@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
+import { BUDDA_TEXTURE_KEY, ensureBuddaTexture } from '../actors/budda';
 import { getTeam } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { CHECKPOINTS, saveAtCheckpoint } from '../game/progression/checkpoints';
 import { recoveredRelicCount, RELIC_IDS } from '../game/progression/relics';
+import { BUDDA_ENCOUNTERS, buddaFlag, discoverBudda, foundBuddaCount } from '../game/progression/budda';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
@@ -15,7 +17,7 @@ const RELIC_COLORS = [
 ] as const;
 
 interface HubFixture {
-  readonly id: 'fridge' | 'mantle' | 'exit';
+  readonly id: 'fridge' | 'mantle' | 'exit' | 'budda';
   readonly x: number;
   readonly y: number;
 }
@@ -24,6 +26,7 @@ const FIXTURES: readonly HubFixture[] = [
   { id: 'fridge', x: 35, y: 113 },
   { id: 'mantle', x: 191, y: 99 },
   { id: 'exit', x: 128, y: 218 },
+  { id: 'budda', x: 67, y: 145 },
 ];
 
 export class BlueHoleHubScene extends Phaser.Scene {
@@ -54,6 +57,9 @@ export class BlueHoleHubScene extends Phaser.Scene {
     this.repository.save(this.save);
 
     this.drawRoom();
+    ensureBuddaTexture(this);
+    if (!this.save.flags[buddaFlag('rockaway')])
+      this.add.sprite(67, 145, BUDDA_TEXTURE_KEY).setScale(1.35);
     this.controls = new PhaserInput(this);
     new TouchControls(this, this.controls);
     this.createPlayer();
@@ -218,6 +224,14 @@ export class BlueHoleHubScene extends Phaser.Scene {
         'FRIDGE CHECKED • HEALTH & MAGIC RESTORED • GAME SAVED',
       );
       this.cameras.main.flash(130, 140, 220, 255, false);
+      this.refreshHud();
+      return;
+    }
+    if (id === 'budda') {
+      this.save = discoverBudda(this.save, 'rockaway', new Date().toISOString());
+      this.repository.save(this.save);
+      const count = foundBuddaCount(this.save);
+      this.message.setText(`BUDDA: ${BUDDA_ENCOUNTERS.rockaway.line} • ${BUDDA_ENCOUNTERS.rockaway.reward} • ${count}/6 FOUND`);
       this.refreshHud();
       return;
     }
