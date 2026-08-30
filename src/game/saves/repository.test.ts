@@ -67,5 +67,15 @@ describe('SaveRepository', () => {
       maxLives: 3,
     });
   });
-});
 
+  it('advances completed boss checkpoints to the connected route', () => {
+    const repository = new SaveRepository(new MemoryStorage());
+    const save = createNewSave('dad_paula');
+    repository.save({
+      ...save,
+      checkpointId: 'hillsboro_west_boss_entry',
+      relics: ['crystal_hillsboro_west'],
+    });
+    expect(repository.load()?.checkpointId).toBe('connected_quest_route');
+  });
+});
