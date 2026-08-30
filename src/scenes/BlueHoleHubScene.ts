@@ -225,8 +225,8 @@ export class BlueHoleHubScene extends Phaser.Scene {
     const count = recoveredRelicCount(this.save.relics);
     this.message.setText(
       count === RELIC_IDS.length
-        ? 'ALL FIVE CRYSTALS RESTORED • THE HOLIDAY HEARTH BURNS BRIGHT!'
-        : `THE HEARTH IS COLD • ${count} / ${RELIC_IDS.length} CRYSTALS RESTORED`,
+        ? 'ALL FIVE ARTIFACTS RESTORED • THE HOLIDAY HEARTH BURNS BRIGHT!'
+        : `THE HEARTH IS COLD • ${count} / ${RELIC_IDS.length} ARTIFACTS RESTORED`,
     );
   }
 
