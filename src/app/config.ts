@@ -5,6 +5,7 @@ import { FoundryTestScene } from '../scenes/FoundryTestScene';
 import { ForestQuestScene } from '../scenes/ForestQuestScene';
 import { Highway26Scene } from '../scenes/Highway26Scene';
 import { LodgeQuestScene } from '../scenes/LodgeQuestScene';
+import { LocationBossScene } from '../scenes/LocationBossScene';
 import { TeamSelectScene } from '../scenes/TeamSelectScene';
 import { TitleScene } from '../scenes/TitleScene';
 
@@ -28,6 +29,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     ForestQuestScene,
     LodgeQuestScene,
     FoundryTestScene,
+    LocationBossScene,
   ],
   physics: {
     default: 'arcade',
