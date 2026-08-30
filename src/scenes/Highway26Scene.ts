@@ -94,6 +94,11 @@ export class Highway26Scene extends Phaser.Scene {
       return;
     }
 
+    if (this.routeIndex === 3 && this.controls.actions.get('confirm').pressed) {
+      this.scene.start('lodge-quest');
+      return;
+    }
+
     if (
       this.routeIndex === ROUTE.length - 1 &&
       this.controls.actions.get('confirm').pressed
@@ -298,9 +303,10 @@ export class Highway26Scene extends Phaser.Scene {
       this.locationText.setText('HILLSBORO WEST • ENTER / A: ENTER FOUNDRY');
     } else if (this.routeIndex === 2) {
       this.locationText.setText('COAST RANGE FOREST • ENTER / A: EXPLORE');
+    } else if (this.routeIndex === 3) {
+      this.locationText.setText('CAMP 18 LODGE • ENTER / A: INVESTIGATE');
     } else {
       this.locationText.setText(`${point.label} • KEEP TRAVELING EAST`);
     }
   }
 }
-
