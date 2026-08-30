@@ -1,7 +1,12 @@
 import type { SaveData } from '../saves/schema';
+import { bossLocationForCheckpoint } from './bossLocations';
 
 export type CheckpointScene =
-  'blue-hole-hub' | 'forest-quest' | 'lodge-quest' | 'foundry-test';
+  | 'blue-hole-hub'
+  | 'forest-quest'
+  | 'lodge-quest'
+  | 'foundry-test'
+  | 'location-boss';
 
 export const CHECKPOINTS = {
   home: 'rockaway_blue_hole',
@@ -19,6 +24,7 @@ export function saveAtCheckpoint(
 }
 
 export function sceneForCheckpoint(checkpointId: string): CheckpointScene {
+  if (bossLocationForCheckpoint(checkpointId)) return 'location-boss';
   if (checkpointId === CHECKPOINTS.forest) return 'forest-quest';
   if (checkpointId === CHECKPOINTS.lodge) return 'lodge-quest';
   if (checkpointId === CHECKPOINTS.foundry) return 'foundry-test';
