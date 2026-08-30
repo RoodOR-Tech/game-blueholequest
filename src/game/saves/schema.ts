@@ -1,4 +1,4 @@
-import type { TeamId } from '../../content/teams';
+import { getTeam, type TeamId } from '../../content/teams';
 
 export const SAVE_VERSION = 1 as const;
 
@@ -31,16 +31,22 @@ export interface SaveDataV1 {
 export type SaveData = SaveDataV1;
 
 export function createNewSave(activeTeamId: TeamId): SaveDataV1 {
+  const team = getTeam(activeTeamId);
   return {
     version: SAVE_VERSION,
     activeTeamId,
     checkpointId: 'rockaway_blue_hole',
-    stats: { attackLevel: 1, magicLevel: 1, lifeLevel: 1, experience: 0 },
+    stats: {
+      attackLevel: team.startingStats.attack,
+      magicLevel: team.startingStats.magic,
+      lifeLevel: team.startingStats.life,
+      experience: 0,
+    },
     resources: {
-      life: 6,
-      maxLife: 6,
-      magic: 4,
-      maxMagic: 4,
+      life: 4 + team.startingStats.life,
+      maxLife: 4 + team.startingStats.life,
+      magic: 3 + team.startingStats.magic,
+      maxMagic: 3 + team.startingStats.magic,
       lives: 3,
       maxLives: 3,
     },
