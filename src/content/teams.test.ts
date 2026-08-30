@@ -7,9 +7,8 @@ describe('team content', () => {
     expect(new Set(TEAMS.map((team) => team.id)).size).toBe(5);
   });
 
-  it('marks Dad & Paula as the initial production-ready team', () => {
+  it('makes every family team playable', () => {
     expect(getTeam('dad_paula').productionReady).toBe(true);
-    expect(TEAMS.filter((team) => team.productionReady)).toHaveLength(1);
+    expect(TEAMS.filter((team) => team.productionReady)).toHaveLength(5);
   });
 });
-
