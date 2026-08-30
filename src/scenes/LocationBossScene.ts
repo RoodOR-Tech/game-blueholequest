@@ -211,7 +211,14 @@ export class LocationBossScene extends Phaser.Scene {
       'walla_walla',
       'bend',
     ].indexOf(this.location.id);
-    const spread = locationIndex >= 3 ? [-0.3, 0, 0.3] : locationIndex >= 1 ? [-0.18, 0.18] : [0];
+    const patterns = [
+      [0],
+      [-0.2, 0.2],
+      [-0.32, 0, 0.32],
+      [-0.48, -0.16, 0.16, 0.48],
+      [-0.58, -0.29, 0, 0.29, 0.58],
+    ] as const;
+    const spread = patterns[locationIndex] ?? patterns[0];
     spread.forEach((angle) => {
       const direction = base.clone().rotate(angle);
       const shot = this.physics.add.sprite(
@@ -227,6 +234,17 @@ export class LocationBossScene extends Phaser.Scene {
       this.projectiles.push(shot);
     });
     this.boss.setTint(this.location.color);
+    if (this.location.id === 'hillsboro_east')
+      this.boss.y = Phaser.Math.Clamp(this.boss.y + (Math.random() < 0.5 ? -28 : 28), 92, 188);
+    else if (this.location.id === 'milwaukie')
+      this.boss.x = Phaser.Math.Clamp(this.boss.x - 14, 150, 218);
+    else if (this.location.id === 'walla_walla')
+      this.boss.setVelocityY(Math.sin(time / 180) * 30);
+    else if (this.location.id === 'bend') {
+      this.cameras.main.shake(120, 0.004);
+      this.boss.setScale(1.08);
+      this.time.delayedCall(180, () => this.boss?.setScale(1));
+    }
     this.time.delayedCall(130, () => this.boss?.clearTint());
     this.message?.setText(
       spread.length === 1 ? 'INCOMING SHOT • MOVE!' : 'SPREAD ATTACK • FIND THE GAP!',
