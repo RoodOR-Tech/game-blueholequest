@@ -3,6 +3,7 @@ import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import {
+  prepareCheckpointRetry,
   recoverFromGameOver,
   resolveKnockout,
 } from '../game/progression/lives';
@@ -73,7 +74,8 @@ export class LodgeQuestScene extends Phaser.Scene {
     if (!this.controls || !this.player || !this.save) return;
     this.controls.update(this.input.gamepad?.getPad(0));
     if (this.encounterOver) {
-      this.player.setVelocity(0, 0).play('dad-idle', true);
+      this.player.setVelocity(0, 0);
+      if (!this.knockedOut) this.player.play('dad-idle', true);
       if (
         this.controls.actions.get('confirm').pressed ||
         this.controls.actions.get('attack').pressed ||
@@ -87,7 +89,14 @@ export class LodgeQuestScene extends Phaser.Scene {
             );
             this.repository.save(this.save);
             this.scene.start('blue-hole-hub');
-          } else this.scene.restart();
+          } else {
+            this.save = prepareCheckpointRetry(
+              this.save,
+              new Date().toISOString(),
+            );
+            this.repository.save(this.save);
+            this.scene.restart();
+          }
         } else this.scene.start('blue-hole-hub');
       }
       return;
@@ -230,7 +239,9 @@ export class LodgeQuestScene extends Phaser.Scene {
     this.repository.save(this.save);
     this.player.setTintFill(0xff6655);
     this.cameras.main.shake(100, 0.006);
-    this.time.delayedCall(180, () => this.player?.clearTint());
+    this.time.delayedCall(180, () => {
+      if (!this.knockedOut) this.player?.clearTint();
+    });
     if (result.defeated) {
       const knockout = resolveKnockout(this.save, new Date().toISOString());
       this.save = knockout.save;
@@ -238,6 +249,11 @@ export class LodgeQuestScene extends Phaser.Scene {
       this.encounterOver = true;
       this.knockedOut = true;
       this.gameOver = knockout.gameOver;
+      this.player
+        .setVelocity(0, 0)
+        .setAngle(90)
+        .setAlpha(0.7)
+        .setTint(0xb94b4b);
       this.message?.setText(
         knockout.gameOver
           ? 'GAME OVER • ATTACK / A: RECOVER HOME (-25% EXP)'
