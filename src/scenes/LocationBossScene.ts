@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
-import { applyTeamAppearance } from '../actors/teamAppearance';
+import { configurePlayerBody, playerVisual } from '../actors/familyAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import {
@@ -78,18 +77,18 @@ export class LocationBossScene extends Phaser.Scene {
       primary: 'attack',
       secondary: 'cancel',
     });
+    const visual = playerVisual(this.save.activeTeamId);
     this.player = this.physics.add.sprite(
       45,
       177,
-      DAD_TEXTURE_KEY,
-      'dad-idle-0',
+      visual.texture,
+      visual.frame,
     );
     this.player
-      .setScale(DAD_SPRITE_SCALE)
+      .setScale(visual.scale)
       .setCollideWorldBounds(true)
-      .play('dad-idle');
-    applyTeamAppearance(this.player, this.save.activeTeamId);
-    this.player.body.setSize(210, 500).setOffset(30, 150);
+      .play(visual.idle);
+    configurePlayerBody(this.player, this.save.activeTeamId);
     this.boss = this.physics.add.sprite(205, 145, 'location-boss-sprite');
     const bossScale =
       {
@@ -136,20 +135,21 @@ export class LocationBossScene extends Phaser.Scene {
       Number(this.controls.actions.get('down').down) -
       Number(this.controls.actions.get('up').down);
     const movement = new Phaser.Math.Vector2(x, y).normalize();
+    const visual = playerVisual(this.save.activeTeamId);
     this.player.setVelocity(movement.x * MOVE_SPEED, movement.y * MOVE_SPEED);
     this.player.y = Phaser.Math.Clamp(this.player.y, 83, 211);
     if (movement.lengthSq() > 0) {
       this.facing.copy(movement);
       if (x !== 0) this.player.setFlipX(x < 0);
     }
-    this.player.play(movement.lengthSq() ? 'dad-walk' : 'dad-idle', true);
+    this.player.play(movement.lengthSq() ? visual.walk : visual.idle, true);
 
     if (
       this.controls.actions.get('attack').pressed &&
       time >= this.nextAttackAt
     )
       this.attack(time);
-    if (time < this.attackingUntil) this.player.play('dad-attack', true);
+    if (time < this.attackingUntil) this.player.play(visual.attack, true);
     if (time >= this.nextBossAttackAt && this.boss?.active)
       this.bossAttack(time);
     this.updateProjectiles(time);
