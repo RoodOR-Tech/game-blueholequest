@@ -4,6 +4,7 @@ import {
   DAD_TEXTURE_KEY,
   registerDadAnimations,
 } from '../actors/dadAnimations';
+import { registerFamilyAnimations } from '../actors/familyAnimations';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -16,7 +17,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     registerDadAnimations(this);
+    registerFamilyAnimations(this);
     this.scene.start('title');
   }
 }
-
