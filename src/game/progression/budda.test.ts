@@ -8,8 +8,8 @@ describe('Budda encounters', () => {
     for (const id of Object.keys(BUDDA_ENCOUNTERS))
       save = discoverBudda(save, id as keyof typeof BUDDA_ENCOUNTERS, 'now');
     expect(save.stats.experience).toBe(50);
-    expect(save.stats.attackLevel).toBe(2);
+    expect(save.stats.attackLevel).toBe(4);
     expect(save.inventory).toContain(BUDDA_ACHIEVEMENT);
-    expect(discoverBudda(save, 'milwaukie', 'later').stats.attackLevel).toBe(2);
+    expect(discoverBudda(save, 'milwaukie', 'later').stats.attackLevel).toBe(4);
   });
 });
