@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 
 export const DAD_TEXTURE_KEY = 'dad-sprites-v1';
 export const DAD_SPRITE_PATH = 'assets/sprites/dad-sprites-v1.png';
-export const DAD_SPRITE_SCALE = 0.09;
+// Large enough to read facial detail and body motion against the room-scale art.
+export const DAD_SPRITE_SCALE = 0.125;
 
 const FRAMES = [
   { name: 'dad-idle-0', x: 0, width: 270 },
@@ -54,4 +55,3 @@ export function registerDadAnimations(scene: Phaser.Scene): void {
     });
   }
 }
-
