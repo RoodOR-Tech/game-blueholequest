@@ -13,6 +13,7 @@ describe('location boss progression', () => {
     const second = awardLocationCrystal(first, location, 'two');
     expect(first.relics).toContain(location.crystalId);
     expect(first.stats.experience).toBe(100);
+    expect(first.checkpointId).toBe('connected_quest_route');
     expect(second.relics).toEqual(first.relics);
     expect(second.stats.experience).toBe(100);
   });
