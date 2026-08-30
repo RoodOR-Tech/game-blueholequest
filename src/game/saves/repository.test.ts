@@ -77,5 +77,6 @@ describe('SaveRepository', () => {
       relics: ['crystal_hillsboro_west'],
     });
     expect(repository.load()?.checkpointId).toBe('connected_quest_route');
+    expect(repository.load()?.relics).toEqual(['relic_crystal_hound']);
   });
 });
