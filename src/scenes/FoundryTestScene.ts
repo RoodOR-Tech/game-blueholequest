@@ -149,7 +149,7 @@ export class FoundryTestScene extends Phaser.Scene {
             this.repository.save(this.save);
             this.scene.start('blue-hole-hub');
           } else this.scene.restart();
-        } else this.scene.start('highway-26');
+        } else this.scene.start('blue-hole-hub');
       }
       return;
     }
@@ -323,10 +323,14 @@ export class FoundryTestScene extends Phaser.Scene {
     this.save = reward.save;
     this.repository.save(this.save);
     this.combatOver = true;
+    this.add
+      .circle(154, 184, 8, 0x78c8e8)
+      .setStrokeStyle(2, 0xffffff)
+      .setDepth(20);
     this.message?.setText(
       firstVictory
-        ? 'VICTORY • POWER WRENCH LEARNED • +100 EXP\nENTER / A: CONTINUE'
-        : 'DRONE DEFEATED • ENTER / A: CONTINUE',
+        ? 'CRYSTAL HOUND RECOVERED • POWER WRENCH LEARNED\n+100 EXP • ENTER / A: RETURN HOME'
+        : 'DRONE DEFEATED • ENTER / A: RETURN HOME',
     );
   }
 
@@ -381,4 +385,3 @@ export class FoundryTestScene extends Phaser.Scene {
     );
   }
 }
-
