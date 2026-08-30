@@ -4,6 +4,7 @@ import { BlueHoleHubScene } from '../scenes/BlueHoleHubScene';
 import { FoundryTestScene } from '../scenes/FoundryTestScene';
 import { ForestQuestScene } from '../scenes/ForestQuestScene';
 import { Highway26Scene } from '../scenes/Highway26Scene';
+import { LodgeQuestScene } from '../scenes/LodgeQuestScene';
 import { TeamSelectScene } from '../scenes/TeamSelectScene';
 import { TitleScene } from '../scenes/TitleScene';
 
@@ -25,6 +26,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     BlueHoleHubScene,
     Highway26Scene,
     ForestQuestScene,
+    LodgeQuestScene,
     FoundryTestScene,
   ],
   physics: {
@@ -44,4 +46,3 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     roundPixels: true,
   },
 };
-
