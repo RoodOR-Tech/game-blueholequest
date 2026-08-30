@@ -122,7 +122,7 @@ export class LocationBossScene extends Phaser.Scene {
         this.controls.actions.get('attack').pressed
       ) {
         if (this.knockedOut) this.retryAfterKnockout();
-        else this.scene.start('highway-26');
+        else this.advanceToNextRoute();
       }
       return;
     }
@@ -439,6 +439,18 @@ export class LocationBossScene extends Phaser.Scene {
       this.physics.add.overlap(this.player, this.artifact, () =>
         this.collectArtifact(),
       );
+    this.time.delayedCall(450, () => {
+      if (!this.artifact?.active || !this.player) return;
+      this.tweens.killTweensOf(this.artifact);
+      this.tweens.add({
+        targets: this.artifact,
+        x: this.player.x,
+        y: this.player.y,
+        duration: 650,
+        ease: 'Sine.easeIn',
+        onComplete: () => this.collectArtifact(),
+      });
+    });
     this.message?.setText(
       `${this.location.bossName} DEFEATED • CLAIM THE ARTIFACT!`,
     );
@@ -465,6 +477,22 @@ export class LocationBossScene extends Phaser.Scene {
         : `${this.location.artifactName} RECOVERED • +100 XP\nALL ARTIFACTS FOUND • A: RETURN`,
     );
     this.refreshHud();
+  }
+
+  private advanceToNextRoute(): void {
+    const currentIndex = BOSS_LOCATIONS.findIndex(
+      (location) => location.id === this.location.id,
+    );
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= BOSS_LOCATIONS.length) {
+      this.scene.start('highway-26');
+      return;
+    }
+    this.scene.start('highway-26', {
+      routeIndex: nextIndex,
+      nodeIndex: 0,
+      traveling: true,
+    });
   }
 
   private createHud(): void {
