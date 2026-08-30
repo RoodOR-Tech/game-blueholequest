@@ -163,9 +163,15 @@ export class Highway26Scene extends Phaser.Scene {
     ROUTE.slice(1).forEach((point) => graphics.lineTo(point.x, point.y));
     graphics.strokePath();
     graphics.lineStyle(2, 0xf0d492).strokePath();
-    ROUTE.forEach((point) =>
-      graphics.fillStyle(0x102b3f).fillCircle(point.x, point.y, 4),
-    );
+    ROUTE.forEach((point, index) => {
+      const completed =
+        (index === 2 && this.save?.relics.includes('relic_golden_thumb')) ||
+        (index === 3 && this.save?.relics.includes('relic_amber_stein')) ||
+        (index === 5 && this.save?.relics.includes('relic_crystal_hound'));
+      graphics
+        .fillStyle(completed ? 0xf6d77a : 0x102b3f)
+        .fillCircle(point.x, point.y, completed ? 5 : 4);
+    });
 
     this.add.text(10, 10, 'HIGHWAY 26 • COAST RANGE', {
       color: '#f6d77a',
@@ -177,6 +183,11 @@ export class Highway26Scene extends Phaser.Scene {
       color: '#ffffff',
       fontFamily: 'monospace',
       fontSize: '6px',
+    });
+    this.add.text(10, 191, 'GOLD STOPS: RELIC RECOVERED', {
+      color: '#6a4b2f',
+      fontFamily: 'monospace',
+      fontSize: '5px',
     });
   }
 
