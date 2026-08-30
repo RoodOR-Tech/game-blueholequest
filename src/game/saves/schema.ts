@@ -60,20 +60,31 @@ export function normalizeSaveData(value: unknown): SaveData | null {
     maxLives?: number;
   };
   const defeatedBossCheckpoints: Readonly<Record<string, string>> = {
-    hillsboro_west_boss_entry: 'crystal_hillsboro_west',
-    hillsboro_east_boss_entry: 'crystal_hillsboro_east',
-    milwaukie_boss_entry: 'crystal_milwaukie',
-    walla_walla_boss_entry: 'crystal_walla_walla',
-    bend_boss_entry: 'crystal_bend',
+    hillsboro_west_boss_entry: 'relic_crystal_hound',
+    hillsboro_east_boss_entry: 'relic_golden_thumb',
+    milwaukie_boss_entry: 'relic_amber_stein',
+    walla_walla_boss_entry: 'relic_emerald_leaf',
+    bend_boss_entry: 'relic_marble_mountain',
   };
+  const crystalToArtifact: Readonly<Record<string, string>> = {
+    crystal_hillsboro_west: 'relic_crystal_hound',
+    crystal_hillsboro_east: 'relic_golden_thumb',
+    crystal_milwaukie: 'relic_amber_stein',
+    crystal_walla_walla: 'relic_emerald_leaf',
+    crystal_bend: 'relic_marble_mountain',
+  };
+  const relics = [
+    ...new Set(value.relics.map((id) => crystalToArtifact[id] ?? id)),
+  ];
   const checkpointCrystal = defeatedBossCheckpoints[value.checkpointId];
   const checkpointId =
-    checkpointCrystal && value.relics.includes(checkpointCrystal)
+    checkpointCrystal && relics.includes(checkpointCrystal)
       ? 'connected_quest_route'
       : value.checkpointId;
   return {
     ...value,
     checkpointId,
+    relics,
     resources: {
       ...value.resources,
       lives: legacyResources.lives ?? 3,
