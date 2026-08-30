@@ -3,6 +3,7 @@ import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { awardFoundryVictory } from '../game/combat/foundryReward';
 import { PhaserInput } from '../game/input/PhaserInput';
+import { CHECKPOINTS, saveAtCheckpoint } from '../game/progression/checkpoints';
 import {
   prepareCheckpointRetry,
   recoverFromGameOver,
@@ -58,11 +59,11 @@ export class FoundryTestScene extends Phaser.Scene {
       this.scene.start('team-select');
       return;
     }
-    this.save = {
-      ...this.save,
-      checkpointId: 'hillsboro_west_foundry_entry',
-      savedAt: new Date().toISOString(),
-    };
+    this.save = saveAtCheckpoint(
+      this.save,
+      CHECKPOINTS.foundry,
+      new Date().toISOString(),
+    );
     this.repository.save(this.save);
 
     this.drawRoom();
@@ -118,6 +119,8 @@ export class FoundryTestScene extends Phaser.Scene {
     });
     this.refreshDroneHealth();
     this.refreshPlayerHealth();
+    this.drawSavePoint(52, 163);
+    this.message.setText('CHECKPOINT SAVED • DEFEAT THE SILICON DRONE');
 
     this.add
       .text(230, 9, 'HOME', {
@@ -130,6 +133,18 @@ export class FoundryTestScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.scene.start('highway-26'));
+  }
+
+  private drawSavePoint(x: number, y: number): void {
+    this.add.circle(x, y, 8, 0x5fc9ee, 0.25).setStrokeStyle(1, 0xb9efff);
+    this.add.circle(x, y, 3, 0xe8fbff);
+    this.add
+      .text(x, y - 15, 'SAVE', {
+        color: '#b9efff',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      })
+      .setOrigin(0.5);
   }
 
   private resetEncounterState(): void {
