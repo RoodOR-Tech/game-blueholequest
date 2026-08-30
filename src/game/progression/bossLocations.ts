@@ -5,8 +5,8 @@ export const BOSS_LOCATIONS = [
     id: 'hillsboro_west',
     label: 'HILLSBORO WEST',
     bossName: 'SILICON SENTINEL',
-    crystalId: 'crystal_hillsboro_west',
-    crystalName: 'GOLDEN CURRENT CRYSTAL',
+    artifactId: 'relic_crystal_hound',
+    artifactName: 'CRYSTAL HOUND',
     checkpointId: 'hillsboro_west_boss_entry',
     color: 0xf0b84c,
     bossColor: 0x9e6850,
@@ -18,8 +18,8 @@ export const BOSS_LOCATIONS = [
     id: 'hillsboro_east',
     label: 'HILLSBORO EAST',
     bossName: 'CIRCUIT WARDEN',
-    crystalId: 'crystal_hillsboro_east',
-    crystalName: 'AZURE SIGNAL CRYSTAL',
+    artifactId: 'relic_golden_thumb',
+    artifactName: 'GOLDEN THUMB',
     checkpointId: 'hillsboro_east_boss_entry',
     color: 0x55c8ef,
     bossColor: 0x456fb3,
@@ -31,8 +31,8 @@ export const BOSS_LOCATIONS = [
     id: 'milwaukie',
     label: 'MILWAUKIE',
     bossName: 'RIVERFORGED GUARDIAN',
-    crystalId: 'crystal_milwaukie',
-    crystalName: 'AMBER RIVER CRYSTAL',
+    artifactId: 'relic_amber_stein',
+    artifactName: 'AMBER STEIN',
     checkpointId: 'milwaukie_boss_entry',
     color: 0xffa33e,
     bossColor: 0x337d83,
@@ -44,8 +44,8 @@ export const BOSS_LOCATIONS = [
     id: 'walla_walla',
     label: 'WALLA WALLA',
     bossName: 'VINEYARD COLOSSUS',
-    crystalId: 'crystal_walla_walla',
-    crystalName: 'EMERALD HARVEST CRYSTAL',
+    artifactId: 'relic_emerald_leaf',
+    artifactName: 'EMERALD LEAF',
     checkpointId: 'walla_walla_boss_entry',
     color: 0x7de06f,
     bossColor: 0x6f4938,
@@ -57,8 +57,8 @@ export const BOSS_LOCATIONS = [
     id: 'bend',
     label: 'BEND',
     bossName: 'LAVA PEAK TITAN',
-    crystalId: 'crystal_bend',
-    crystalName: 'RUBY CASCADE CRYSTAL',
+    artifactId: 'relic_marble_mountain',
+    artifactName: 'MARBLE MOUNTAIN',
     checkpointId: 'bend_boss_entry',
     color: 0xff5e55,
     bossColor: 0x662f37,
@@ -70,7 +70,7 @@ export const BOSS_LOCATIONS = [
 
 export type BossLocation = (typeof BOSS_LOCATIONS)[number];
 export type BossLocationId = BossLocation['id'];
-export type CrystalId = BossLocation['crystalId'];
+export type ArtifactId = BossLocation['artifactId'];
 
 export function bossLocationById(id: unknown): BossLocation {
   return (
@@ -85,16 +85,16 @@ export function bossLocationForCheckpoint(checkpointId: string): BossLocation | 
   );
 }
 
-export function awardLocationCrystal(
+export function awardLocationArtifact(
   save: SaveData,
   location: BossLocation,
   savedAt: string,
 ): SaveData {
-  const firstRecovery = !save.relics.includes(location.crystalId);
+  const firstRecovery = !save.relics.includes(location.artifactId);
   return {
     ...save,
     relics: firstRecovery
-      ? [...save.relics, location.crystalId]
+      ? [...save.relics, location.artifactId]
       : save.relics,
     stats: {
       ...save.stats,
@@ -103,7 +103,7 @@ export function awardLocationCrystal(
     flags: {
       ...save.flags,
       [`boss_${location.id}_defeated`]: true,
-      [`crystal_${location.id}_recovered`]: true,
+      [`artifact_${location.id}_recovered`]: true,
     },
     checkpointId: 'connected_quest_route',
     savedAt,
@@ -116,5 +116,5 @@ export function isLocationUnlocked(
 ): boolean {
   if (locationIndex <= 0) return true;
   const previous = BOSS_LOCATIONS[locationIndex - 1];
-  return previous ? recovered.includes(previous.crystalId) : false;
+  return previous ? recovered.includes(previous.artifactId) : false;
 }
