@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TEAMS, type TeamDefinition } from '../content/teams';
+import { drawTeamPortrait } from '../actors/teamAppearance';
 import { sanitizeGamepads } from '../game/input/PhaserInput';
 import { SaveRepository } from '../game/saves/repository';
 import { createNewSave } from '../game/saves/schema';
@@ -82,8 +83,9 @@ export class TeamSelectScene extends Phaser.Scene {
       0x102b3f,
     );
     background.setStrokeStyle(1, 0x42677e);
+    const portrait = drawTeamPortrait(this, team.id, -88, -1);
     const label = this.add
-      .text(-92, -6, team.displayName.toUpperCase(), {
+      .text(-72, -6, team.displayName.toUpperCase(), {
         color: '#ffffff',
         fontFamily: 'monospace',
         fontSize: '8px',
@@ -100,7 +102,7 @@ export class TeamSelectScene extends Phaser.Scene {
     const container = this.add.container(
       CARD_X + CARD_WIDTH / 2,
       y + CARD_HEIGHT / 2,
-      [background, label, readiness],
+      [background, portrait, label, readiness],
     );
     container
       .setSize(CARD_WIDTH, CARD_HEIGHT)
@@ -136,9 +138,7 @@ export class TeamSelectScene extends Phaser.Scene {
     const team = TEAMS[this.selectedIndex];
     if (!team || !this.statusText) return;
     this.statusText.setText(
-      team.productionReady
-        ? `${team.displayName.toUpperCase()} • ${team.startingStats.attack} ATK / ${team.startingStats.magic} MAG / ${team.startingStats.life} LIF`
-        : `${team.displayName.toUpperCase()} WILL UNLOCK AFTER THE VERTICAL SLICE`,
+      `${team.displayName.toUpperCase()} • ${team.startingStats.attack} ATK / ${team.startingStats.magic} MAG / ${team.startingStats.life} LIF\n${team.weaponId.replaceAll('_', ' ').toUpperCase()} • ${team.passiveId.replaceAll('_', ' ').toUpperCase()}`,
     );
   }
 
