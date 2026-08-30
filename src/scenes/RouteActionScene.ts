@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
-import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { BUDDA_TEXTURE_KEY, ensureBuddaTexture } from '../actors/budda';
-import { applyTeamAppearance } from '../actors/teamAppearance';
+import { configurePlayerBody, playerVisual } from '../actors/familyAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { bossLocationById, type BossLocationId } from '../game/progression/bossLocations';
@@ -80,19 +79,19 @@ export class RouteActionScene extends Phaser.Scene {
     });
     const floor = this.add.rectangle(256, 229, 512, 22);
     this.physics.add.existing(floor, true);
+    const visual = playerVisual(this.save.activeTeamId);
     this.player = this.physics.add.sprite(
       34,
       180,
-      DAD_TEXTURE_KEY,
-      'dad-idle-0',
+      visual.texture,
+      visual.frame,
     );
     this.player
-      .setScale(DAD_SPRITE_SCALE)
+      .setScale(visual.scale)
       .setGravityY(430)
       .setCollideWorldBounds(true)
-      .play('dad-idle');
-    applyTeamAppearance(this.player, this.save.activeTeamId);
-    this.player.body.setSize(210, 500).setOffset(30, 150);
+      .play(visual.idle);
+    configurePlayerBody(this.player, this.save.activeTeamId);
     this.physics.add.collider(this.player, floor);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
     this.definition.obstacleXs.forEach((x, index) =>
@@ -146,8 +145,10 @@ export class RouteActionScene extends Phaser.Scene {
     )
       this.attack(time);
     if (time >= this.attackingUntil) {
-      if (!this.player.body.blocked.down) this.player.setFrame('dad-jump');
-      else this.player.play(horizontal ? 'dad-walk' : 'dad-idle', true);
+      const visual = playerVisual(this.save.activeTeamId);
+      if (!this.player.body.blocked.down)
+        this.player.setTexture(visual.jumpTexture, visual.jumpFrame);
+      else this.player.play(horizontal ? visual.walk : visual.idle, true);
     }
     this.updateEnemies(time);
     this.updateEnvironmentMechanic(time);
@@ -353,7 +354,7 @@ export class RouteActionScene extends Phaser.Scene {
     if (!this.player) return;
     this.nextAttackAt = time + 280;
     this.attackingUntil = time + 210;
-    this.player.play('dad-attack', true);
+    if (this.save) this.player.play(playerVisual(this.save.activeTeamId).attack, true);
     const x = this.player.x + this.facing * 24;
     const slash = this.add.rectangle(x, this.player.y, 28, 17, 0xffd86b, 0.68);
     this.tweens.add({ targets: slash, alpha: 0, duration: 100, onComplete: () => slash.destroy() });
