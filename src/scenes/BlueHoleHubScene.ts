@@ -9,6 +9,9 @@ import { TouchControls } from '../ui/TouchControls';
 
 const PLAYER_SPEED = 58;
 const INTERACTION_DISTANCE = 31;
+const RELIC_COLORS = [
+  0xf2c94c, 0x7ed6ef, 0xd68b32, 0x58b87a, 0xd6d1c7,
+] as const;
 
 interface HubFixture {
   readonly id: 'fridge' | 'mantle' | 'exit';
@@ -233,8 +236,9 @@ export class BlueHoleHubScene extends Phaser.Scene {
     const recovered = new Set(this.save.relics);
     this.mantleSockets.forEach((socket, index) => {
       const id = RELIC_IDS[index];
-      socket.setFillStyle(id && recovered.has(id) ? 0x74d7f2 : 0x10161c);
+      socket.setFillStyle(
+        id && recovered.has(id) ? (RELIC_COLORS[index] ?? 0x74d7f2) : 0x10161c,
+      );
     });
   }
 }
-
