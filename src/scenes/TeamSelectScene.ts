@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TEAMS, type TeamDefinition } from '../content/teams';
+import { sanitizeGamepads } from '../game/input/PhaserInput';
 import { SaveRepository } from '../game/saves/repository';
 import { createNewSave } from '../game/saves/schema';
 
@@ -13,6 +14,9 @@ export class TeamSelectScene extends Phaser.Scene {
   private selectedIndex = 0;
   private cards: Phaser.GameObjects.Container[] = [];
   private statusText?: Phaser.GameObjects.Text;
+  private readonly selectPrevious = () => this.moveSelection(-1);
+  private readonly selectNext = () => this.moveSelection(1);
+  private readonly confirm = () => this.confirmSelection();
 
   constructor() {
     super('team-select');
@@ -49,14 +53,19 @@ export class TeamSelectScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.renderSelection();
-    this.input.keyboard?.on('keydown-UP', () => this.moveSelection(-1));
-    this.input.keyboard?.on('keydown-W', () => this.moveSelection(-1));
-    this.input.keyboard?.on('keydown-DOWN', () => this.moveSelection(1));
-    this.input.keyboard?.on('keydown-S', () => this.moveSelection(1));
-    this.input.keyboard?.on('keydown-ENTER', () => this.confirmSelection());
-    this.input.keyboard?.on('keydown-SPACE', () => this.confirmSelection());
+    this.input.keyboard?.on('keydown-UP', this.selectPrevious);
+    this.input.keyboard?.on('keydown-W', this.selectPrevious);
+    this.input.keyboard?.on('keydown-DOWN', this.selectNext);
+    this.input.keyboard?.on('keydown-S', this.selectNext);
+    this.input.keyboard?.on('keydown-ENTER', this.confirm);
+    this.input.keyboard?.on('keydown-SPACE', this.confirm);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.input.keyboard?.removeAllListeners();
+      this.input.keyboard?.off('keydown-UP', this.selectPrevious);
+      this.input.keyboard?.off('keydown-W', this.selectPrevious);
+      this.input.keyboard?.off('keydown-DOWN', this.selectNext);
+      this.input.keyboard?.off('keydown-S', this.selectNext);
+      this.input.keyboard?.off('keydown-ENTER', this.confirm);
+      this.input.keyboard?.off('keydown-SPACE', this.confirm);
     });
   }
 
@@ -146,7 +155,7 @@ export class TeamSelectScene extends Phaser.Scene {
 
     const repository = new SaveRepository(window.localStorage);
     repository.save(createNewSave(team.id));
+    sanitizeGamepads(this);
     this.scene.start('blue-hole-hub');
   }
 }
-
