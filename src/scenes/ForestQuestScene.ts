@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
+import { CHECKPOINTS, saveAtCheckpoint } from '../game/progression/checkpoints';
 import { awardForestRelic } from '../game/progression/forestReward';
 import { LANTERN_ITEM_ID } from '../game/progression/routeRules';
 import {
@@ -34,6 +35,8 @@ export class ForestQuestScene extends Phaser.Scene {
   private status?: Phaser.GameObjects.Text;
   private lanternGlow?: Phaser.GameObjects.Arc;
   private enemies: ForestEnemy[] = [];
+  private bossEnemy?: ForestEnemy;
+  private bossFightActive = false;
   private brambles: Phaser.GameObjects.Rectangle[] = [];
   private facing: -1 | 1 = 1;
   private lastGroundedAt = 0;
@@ -58,6 +61,12 @@ export class ForestQuestScene extends Phaser.Scene {
       this.scene.start('team-select');
       return;
     }
+    this.save = saveAtCheckpoint(
+      this.save,
+      CHECKPOINTS.forest,
+      new Date().toISOString(),
+    );
+    this.repository.save(this.save);
 
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, 240);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, 240);
@@ -88,8 +97,10 @@ export class ForestQuestScene extends Phaser.Scene {
 
     this.spawnEnemy('beetle', 188, 202, 2);
     this.spawnEnemy('owl', 310, 147, 2);
-    this.spawnEnemy('warden', 452, 190, 5);
+    this.bossEnemy = this.spawnEnemy('warden', 452, 190, 5);
+    this.bossEnemy.sprite.disableBody(true, true);
     this.createHud();
+    this.drawSavePoint(74, 180);
 
     const hasLantern = this.save.inventory.includes(LANTERN_ITEM_ID);
     this.lanternGlow = this.add
@@ -101,7 +112,7 @@ export class ForestQuestScene extends Phaser.Scene {
       .setDepth(4);
     this.message?.setText(
       hasLantern
-        ? 'THE COLEMAN LANTERN CUTS THROUGH THE FOG'
+        ? 'CHECKPOINT SAVED • THE COLEMAN LANTERN CUTS THROUGH THE FOG'
         : 'THE FOREST FOG IS TOO DENSE • FIND THE LANTERN',
     );
     if (!hasLantern) {
@@ -110,8 +121,22 @@ export class ForestQuestScene extends Phaser.Scene {
     }
   }
 
+  private drawSavePoint(x: number, y: number): void {
+    this.add.circle(x, y, 8, 0x5fc9ee, 0.25).setStrokeStyle(1, 0xb9efff);
+    this.add.circle(x, y, 3, 0xe8fbff);
+    this.add
+      .text(x, y - 15, 'SAVE', {
+        color: '#b9efff',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      })
+      .setOrigin(0.5);
+  }
+
   private resetEncounterState(): void {
     this.enemies = [];
+    this.bossEnemy = undefined;
+    this.bossFightActive = false;
     this.brambles = [];
     this.facing = 1;
     this.lastGroundedAt = 0;
@@ -193,6 +218,8 @@ export class ForestQuestScene extends Phaser.Scene {
     }
 
     this.updateEnemies(time);
+    if (!this.bossFightActive && this.player.x >= 395) this.startBossFight();
+    if (this.bossFightActive && this.player.x < 390) this.player.x = 390;
     this.checkHazards(time);
     if (this.controls.actions.get('cancel').pressed)
       this.scene.start('highway-26');
@@ -295,6 +322,17 @@ export class ForestQuestScene extends Phaser.Scene {
       this.damagePlayer(time, this.player.x < 276 ? -1 : 1);
   }
 
+  private startBossFight(): void {
+    if (!this.bossEnemy) return;
+    this.bossFightActive = true;
+    this.enemies.forEach((enemy) => {
+      if (enemy.kind !== 'warden') enemy.sprite.destroy();
+    });
+    this.bossEnemy.sprite.enableBody(true, 452, 190, true, true);
+    this.cameras.main.flash(180, 190, 225, 210, false);
+    this.message?.setText('WARDEN GROVE SEALED • ONE-ON-ONE DUEL!');
+  }
+
   private damagePlayer(time: number, direction: number): void {
     if (!this.player || !this.save) return;
     this.invulnerableUntil = time + 900;
@@ -363,19 +401,21 @@ export class ForestQuestScene extends Phaser.Scene {
     x: number,
     y: number,
     health: number,
-  ): void {
+  ): ForestEnemy {
     const sprite = this.physics.add.sprite(x, y, `forest-${kind}`);
     sprite
       .setScale(kind === 'warden' ? 1 : 1.25)
       .setCollideWorldBounds(true)
       .setImmovable(true);
     sprite.body.setAllowGravity(false);
-    this.enemies.push({
+    const enemy: ForestEnemy = {
       kind,
       sprite,
       health: { current: health, maximum: health },
       originX: x,
-    });
+    };
+    this.enemies.push(enemy);
+    return enemy;
   }
 
   private createHud(): void {
