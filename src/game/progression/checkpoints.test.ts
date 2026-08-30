@@ -16,6 +16,7 @@ describe('location checkpoints', () => {
   });
 
   it('routes Continue to each location entrance', () => {
+    expect(sceneForCheckpoint(CHECKPOINTS.route)).toBe('highway-26');
     expect(sceneForCheckpoint(CHECKPOINTS.forest)).toBe('forest-quest');
     expect(sceneForCheckpoint(CHECKPOINTS.lodge)).toBe('lodge-quest');
     expect(sceneForCheckpoint(CHECKPOINTS.foundry)).toBe('foundry-test');
