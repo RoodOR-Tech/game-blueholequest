@@ -39,9 +39,22 @@ export class Highway26Scene extends Phaser.Scene {
   private choiceTexts: Phaser.GameObjects.Text[] = [];
   private gameOver = false;
   private readonly repository = new SaveRepository(window.localStorage);
+  private requestedRouteIndex?: number;
+  private requestedNodeIndex?: number;
+  private requestedTraveling = false;
 
   constructor() {
     super('highway-26');
+  }
+
+  init(data: {
+    routeIndex?: number;
+    nodeIndex?: number;
+    traveling?: boolean;
+  }): void {
+    this.requestedRouteIndex = data.routeIndex;
+    this.requestedNodeIndex = data.nodeIndex;
+    this.requestedTraveling = data.traveling === true;
   }
 
   create(): void {
@@ -72,8 +85,17 @@ export class Highway26Scene extends Phaser.Scene {
       (location) => !this.save?.relics.includes(location.crystalId),
     );
     this.routeIndex =
-      firstIncomplete === -1 ? LOCATION_ROUTES.length - 1 : firstIncomplete;
-    this.drawRouteMenu();
+      this.requestedRouteIndex ??
+      (firstIncomplete === -1 ? LOCATION_ROUTES.length - 1 : firstIncomplete);
+    this.nodeIndex = this.requestedNodeIndex ?? 0;
+    this.traveling = this.requestedTraveling;
+    if (this.traveling) {
+      this.drawJourney();
+      this.marker?.setPosition(
+        NODE_X[this.nodeIndex] ?? NODE_X[0],
+        this.nodeY(this.nodeIndex),
+      );
+    } else this.drawRouteMenu();
   }
 
   update(): void {
@@ -136,6 +158,13 @@ export class Highway26Scene extends Phaser.Scene {
     if (!route || !event || !this.save) return;
     if (this.save.flags[routeEventFlag(route.locationId, event.id)]) {
       this.message?.setText(`${event.title} • ALREADY CLEARED`);
+      return;
+    }
+    if (event.kind === 'environment') {
+      this.scene.start('route-action', {
+        locationId: route.locationId,
+        eventIndex: this.nodeIndex - 1,
+      });
       return;
     }
     this.activeEvent = event;
