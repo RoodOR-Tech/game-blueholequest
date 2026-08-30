@@ -13,6 +13,14 @@ import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
 
 const NODE_X = [28, 78, 128, 178, 228] as const;
+const WORLD_POINTS = [
+  { x: 24, y: 178, label: 'ROCKAWAY' },
+  { x: 65, y: 158, label: 'HILLSBORO W' },
+  { x: 108, y: 174, label: 'HILLSBORO E' },
+  { x: 134, y: 130, label: 'MILWAUKIE' },
+  { x: 166, y: 83, label: 'WALLA WALLA' },
+  { x: 226, y: 57, label: 'BEND' },
+] as const;
 
 export class Highway26Scene extends Phaser.Scene {
   private controls?: PhaserInput;
@@ -60,6 +68,11 @@ export class Highway26Scene extends Phaser.Scene {
         padding: { x: 5, y: 4 },
       })
       .setOrigin(0.5);
+    const firstIncomplete = BOSS_LOCATIONS.findIndex(
+      (location) => !this.save?.relics.includes(location.crystalId),
+    );
+    this.routeIndex =
+      firstIncomplete === -1 ? LOCATION_ROUTES.length - 1 : firstIncomplete;
     this.drawRouteMenu();
   }
 
@@ -84,22 +97,6 @@ export class Highway26Scene extends Phaser.Scene {
 
   private updateMenu(): void {
     if (!this.controls) return;
-    if (this.controls.actions.get('up').pressed) {
-      this.routeIndex = Phaser.Math.Wrap(
-        this.routeIndex - 1,
-        0,
-        LOCATION_ROUTES.length,
-      );
-      this.drawRouteMenu();
-    }
-    if (this.controls.actions.get('down').pressed) {
-      this.routeIndex = Phaser.Math.Wrap(
-        this.routeIndex + 1,
-        0,
-        LOCATION_ROUTES.length,
-      );
-      this.drawRouteMenu();
-    }
     if (this.controls.actions.get('confirm').pressed) {
       this.traveling = true;
       this.nodeIndex = 0;
@@ -272,32 +269,52 @@ export class Highway26Scene extends Phaser.Scene {
   private drawRouteMenu(): void {
     this.clearMap();
     const g = this.graphics!;
-    LOCATION_ROUTES.forEach((route, index) => {
-      const y = 51 + index * 31;
-      const location = BOSS_LOCATIONS[index];
-      const selected = index === this.routeIndex;
-      const complete =
-        location !== undefined && this.save?.relics.includes(location.crystalId);
-      g.lineStyle(selected ? 3 : 1, selected ? 0xf6d77a : 0x76583c);
-      g.lineBetween(28, 116, 186, y);
-      g.fillStyle(complete ? 0xf6d77a : selected ? 0x2c7794 : 0x17374c)
-        .fillCircle(194, y, selected ? 7 : 5);
+    g.fillStyle(0x2c6a3f).fillRect(13, 35, 230, 164);
+    g.fillStyle(0x2778a8).fillRect(13, 164, 47, 35);
+    g.lineStyle(5, 0x76583c);
+    g.beginPath();
+    g.moveTo(WORLD_POINTS[0].x, WORLD_POINTS[0].y);
+    WORLD_POINTS.slice(1).forEach((point) => g.lineTo(point.x, point.y));
+    g.strokePath();
+    g.lineStyle(2, 0xf0d492).strokePath();
+    WORLD_POINTS.forEach((point, index) => {
+      const completed =
+        index === 0 ||
+        Boolean(
+          BOSS_LOCATIONS[index - 1] &&
+            this.save?.relics.includes(BOSS_LOCATIONS[index - 1]!.crystalId),
+        );
+      const current = index === this.routeIndex;
+      g.fillStyle(completed ? 0xf6d77a : 0x17374c).fillCircle(
+        point.x,
+        point.y,
+        current ? 7 : 5,
+      );
       this.labels.push(
         this.add
-          .text(238, y, route.label.replace(' ROUTE', ''), {
-            color: selected ? '#08111d' : '#355065',
+          .text(point.x, point.y - 13, point.label, {
+            align: 'center',
+            color: '#ffffff',
             fontFamily: 'monospace',
-            fontSize: '5px',
-            fontStyle: selected ? 'bold' : 'normal',
+            fontSize: '4px',
           })
-          .setOrigin(1, 0.5),
+          .setOrigin(0.5),
       );
     });
-    g.fillStyle(0x175574).fillCircle(28, 116, 8);
-    this.heading?.setText('CHOOSE A DESTINATION ROUTE');
-    this.message?.setText('UP / DOWN: ROUTE • A / ENTER: DEPART • B / ESC: HOME');
+    const route = LOCATION_ROUTES[this.routeIndex];
+    this.heading?.setText('THE CONNECTED QUEST MAP');
+    this.message?.setText(
+      route
+        ? `${route.origin} → ${route.label.replace(' ROUTE', '')} • A: DEPART • B: HOME`
+        : 'ALL DESTINATIONS COMPLETE • B / ESC: HOME',
+    );
     this.marker = this.add
-      .circle(194, 51 + this.routeIndex * 31, 3, 0xffffff)
+      .circle(
+        WORLD_POINTS[this.routeIndex]?.x ?? 24,
+        WORLD_POINTS[this.routeIndex]?.y ?? 178,
+        3,
+        0xffffff,
+      )
       .setStrokeStyle(1, 0x08111d);
   }
 
