@@ -138,7 +138,7 @@ export class TeamSelectScene extends Phaser.Scene {
     const team = TEAMS[this.selectedIndex];
     if (!team || !this.statusText) return;
     this.statusText.setText(
-      `${team.displayName.toUpperCase()} • ${team.startingStats.attack} ATK / ${team.startingStats.magic} MAG / ${team.startingStats.life} LIF\n${team.weaponId.replaceAll('_', ' ').toUpperCase()} • ${team.passiveId.replaceAll('_', ' ').toUpperCase()}`,
+      `${team.displayName.toUpperCase()} • ${team.startingStats.attack} ATK / ${team.startingStats.magic} MAG / ${team.startingStats.life} LIF\n${team.weaponId.replaceAll('_', ' ').toUpperCase()}\n${team.passiveDescription.toUpperCase()}`,
     );
   }
 
