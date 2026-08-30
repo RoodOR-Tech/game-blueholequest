@@ -1,37 +1,35 @@
 import Phaser from 'phaser';
-import {
-  resolveWilsonRiverChoice,
-  WILSON_RIVER_CHOICES,
-} from '../game/calamities/wilsonRiver';
 import { PhaserInput } from '../game/input/PhaserInput';
+import { BOSS_LOCATIONS } from '../game/progression/bossLocations';
 import {
-  BOSS_LOCATIONS,
-  isLocationUnlocked,
-} from '../game/progression/bossLocations';
+  LOCATION_ROUTES,
+  resolveRouteChoice,
+  routeEventFlag,
+  type RouteEvent,
+} from '../game/progression/locationRoutes';
 import { recoverFromGameOver } from '../game/progression/lives';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
 
-const ROUTE = [
-  { x: 25, y: 190, label: 'ROCKAWAY', locationId: null },
-  { x: 65, y: 165, label: 'HILLSBORO W', locationId: 'hillsboro_west' },
-  { x: 105, y: 140, label: 'HILLSBORO E', locationId: 'hillsboro_east' },
-  { x: 145, y: 119, label: 'MILWAUKIE', locationId: 'milwaukie' },
-  { x: 186, y: 94, label: 'WALLA WALLA', locationId: 'walla_walla' },
-  { x: 228, y: 70, label: 'BEND', locationId: 'bend' },
-] as const;
+const NODE_X = [28, 78, 128, 178, 228] as const;
 
 export class Highway26Scene extends Phaser.Scene {
   private controls?: PhaserInput;
-  private marker?: Phaser.GameObjects.Arc;
-  private locationText?: Phaser.GameObjects.Text;
-  private routeIndex = 0;
   private save?: SaveData;
-  private calamity?: Phaser.GameObjects.Container;
-  private calamityChoiceIndex = 0;
-  private calamityChoiceTexts: Phaser.GameObjects.Text[] = [];
-  private calamityGameOver = false;
+  private routeIndex = 0;
+  private nodeIndex = 0;
+  private traveling = false;
+  private marker?: Phaser.GameObjects.Arc;
+  private graphics?: Phaser.GameObjects.Graphics;
+  private labels: Phaser.GameObjects.Text[] = [];
+  private heading?: Phaser.GameObjects.Text;
+  private message?: Phaser.GameObjects.Text;
+  private eventPanel?: Phaser.GameObjects.Container;
+  private activeEvent?: RouteEvent;
+  private choiceIndex = 0;
+  private choiceTexts: Phaser.GameObjects.Text[] = [];
+  private gameOver = false;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -46,28 +44,29 @@ export class Highway26Scene extends Phaser.Scene {
     }
     this.controls = new PhaserInput(this);
     new TouchControls(this, this.controls);
-    this.drawMap();
-    this.marker = this.add
-      .circle(ROUTE[0].x, ROUTE[0].y, 5, 0xf6d77a)
-      .setStrokeStyle(2, 0x08111d);
-    this.locationText = this.add
-      .text(128, 218, '', {
+    this.heading = this.add.text(9, 8, '', {
+      color: '#f6d77a',
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      fontStyle: 'bold',
+    });
+    this.message = this.add
+      .text(128, 220, '', {
         align: 'center',
         backgroundColor: '#08111ddd',
         color: '#ffffff',
         fontFamily: 'monospace',
-        fontSize: '7px',
-        padding: { x: 6, y: 4 },
+        fontSize: '6px',
+        padding: { x: 5, y: 4 },
       })
       .setOrigin(0.5);
-    this.refreshLocation();
+    this.drawRouteMenu();
   }
 
   update(): void {
     if (!this.controls || !this.save) return;
     this.controls.update(this.input.gamepad?.getPad(0));
-
-    if (this.calamityGameOver) {
+    if (this.gameOver) {
       if (this.controls.actions.get('confirm').pressed) {
         this.save = recoverFromGameOver(this.save, new Date().toISOString());
         this.repository.save(this.save);
@@ -75,192 +74,142 @@ export class Highway26Scene extends Phaser.Scene {
       }
       return;
     }
-
-    if (this.calamity) {
-      if (this.controls.actions.get('up').pressed) {
-        this.calamityChoiceIndex =
-          (this.calamityChoiceIndex + WILSON_RIVER_CHOICES.length - 1) %
-          WILSON_RIVER_CHOICES.length;
-        this.refreshCalamityChoices();
-      }
-      if (this.controls.actions.get('down').pressed) {
-        this.calamityChoiceIndex =
-          (this.calamityChoiceIndex + 1) % WILSON_RIVER_CHOICES.length;
-        this.refreshCalamityChoices();
-      }
-      if (this.controls.actions.get('confirm').pressed) this.resolveCalamity();
+    if (this.eventPanel) {
+      this.updateEvent();
       return;
     }
+    if (!this.traveling) this.updateMenu();
+    else this.updateRoute();
+  }
 
-    const selectedLocation = ROUTE[this.routeIndex]?.locationId;
-    if (selectedLocation && this.controls.actions.get('confirm').pressed) {
-      this.scene.start('location-boss', { locationId: selectedLocation });
-      return;
+  private updateMenu(): void {
+    if (!this.controls) return;
+    if (this.controls.actions.get('up').pressed) {
+      this.routeIndex = Phaser.Math.Wrap(
+        this.routeIndex - 1,
+        0,
+        LOCATION_ROUTES.length,
+      );
+      this.drawRouteMenu();
     }
-
-    const advancing =
-      (this.controls.actions.get('right').pressed ||
-        this.controls.actions.get('up').pressed ||
-        this.controls.actions.get('confirm').pressed) &&
-      this.routeIndex < ROUTE.length - 1;
-    if (advancing) {
-      const targetIndex = this.routeIndex + 1;
-      const locationIndex = targetIndex - 1;
-      if (!isLocationUnlocked(locationIndex, this.save.relics)) {
-        const previous = BOSS_LOCATIONS[locationIndex - 1];
-        this.locationText?.setText(
-          `RECOVER THE ${previous?.crystalName ?? 'PREVIOUS CRYSTAL'} FIRST`,
-        );
-        this.cameras.main.shake(100, 0.003);
-      } else {
-        this.routeIndex = targetIndex;
-        this.moveMarker();
-      }
+    if (this.controls.actions.get('down').pressed) {
+      this.routeIndex = Phaser.Math.Wrap(
+        this.routeIndex + 1,
+        0,
+        LOCATION_ROUTES.length,
+      );
+      this.drawRouteMenu();
     }
+    if (this.controls.actions.get('confirm').pressed) {
+      this.traveling = true;
+      this.nodeIndex = 0;
+      this.drawJourney();
+    }
+    if (this.controls.actions.get('cancel').pressed)
+      this.scene.start('blue-hole-hub');
+  }
 
-    if (
-      (this.controls.actions.get('left').pressed ||
-        this.controls.actions.get('down').pressed) &&
-      this.routeIndex > 0
-    ) {
-      this.routeIndex -= 1;
+  private updateRoute(): void {
+    if (!this.controls) return;
+    const advance =
+      this.controls.actions.get('right').pressed ||
+      this.controls.actions.get('confirm').pressed;
+    if (advance && this.nodeIndex < 4) {
+      this.nodeIndex += 1;
+      this.moveMarker();
+      if (this.nodeIndex <= 3) this.openEvent();
+    } else if (advance && this.nodeIndex === 4) {
+      const route = LOCATION_ROUTES[this.routeIndex];
+      if (route)
+        this.scene.start('location-boss', { locationId: route.locationId });
+    }
+    if (this.controls.actions.get('left').pressed && this.nodeIndex > 0) {
+      this.nodeIndex -= 1;
       this.moveMarker();
     }
-
     if (this.controls.actions.get('cancel').pressed) {
-      this.scene.start('blue-hole-hub');
+      this.traveling = false;
+      this.drawRouteMenu();
     }
   }
 
-  private drawMap(): void {
-    const graphics = this.add.graphics();
-    graphics.fillStyle(0x2772a5).fillRect(0, 0, 256, 240);
-    graphics.fillStyle(0xd7b46a).fillRect(13, 48, 230, 153);
-    graphics.fillStyle(0x22583a);
-    for (let x = 35; x < 210; x += 24) {
-      graphics.fillTriangle(
-        x,
-        164 - x / 3,
-        x + 9,
-        143 - x / 3,
-        x + 18,
-        164 - x / 3,
-      );
+  private openEvent(): void {
+    const route = LOCATION_ROUTES[this.routeIndex];
+    const event = route?.events[this.nodeIndex - 1];
+    if (!route || !event || !this.save) return;
+    if (this.save.flags[routeEventFlag(route.locationId, event.id)]) {
+      this.message?.setText(`${event.title} • ALREADY CLEARED`);
+      return;
     }
-    graphics.lineStyle(6, 0x6a4b2f);
-    graphics.beginPath();
-    graphics.moveTo(ROUTE[0].x, ROUTE[0].y);
-    ROUTE.slice(1).forEach((point) => graphics.lineTo(point.x, point.y));
-    graphics.strokePath();
-    graphics.lineStyle(2, 0xf0d492).strokePath();
-    ROUTE.forEach((point, index) => {
-      const location = index > 0 ? BOSS_LOCATIONS[index - 1] : undefined;
-      const completed =
-        location !== undefined &&
-        this.save?.relics.includes(location.crystalId);
-      graphics
-        .fillStyle(completed ? 0xf6d77a : 0x102b3f)
-        .fillCircle(point.x, point.y, completed ? 5 : 4);
-    });
-
-    this.add.text(10, 10, 'THE CRYSTAL ROUTE', {
-      color: '#f6d77a',
-      fontFamily: 'monospace',
-      fontSize: '9px',
-      fontStyle: 'bold',
-    });
-    this.add.text(10, 25, 'RIGHT / UP / ENTER: TRAVEL  •  ESC: HOME', {
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      fontSize: '6px',
-    });
-    this.add.text(10, 205, 'GOLD STOPS: CRYSTAL RECOVERED', {
-      color: '#6a4b2f',
-      fontFamily: 'monospace',
-      fontSize: '5px',
-    });
-  }
-
-  private moveMarker(): void {
-    const point = ROUTE[this.routeIndex];
-    if (!point || !this.marker) return;
-    this.tweens.add({
-      targets: this.marker,
-      x: point.x,
-      y: point.y,
-      duration: 140,
-    });
-    this.refreshLocation();
-    if (this.routeIndex === 1 && !this.save?.flags.calamity_wilson_river_seen) {
-      this.showCalamity();
-    }
-  }
-
-  private showCalamity(): void {
+    this.activeEvent = event;
+    this.choiceIndex = 0;
+    const border = event.kind === 'calamity' ? 0xff8b62 : 0x7ed995;
     const shade = this.add
-      .rectangle(128, 120, 236, 152, 0x08111d, 0.96)
-      .setStrokeStyle(2, 0xf6d77a);
+      .rectangle(128, 125, 238, 150, 0x08111d, 0.97)
+      .setStrokeStyle(2, border);
     const title = this.add
-      .text(128, 58, 'OREGON TRAIL CALAMITY!', {
-        color: '#f6d77a',
-        fontFamily: 'monospace',
-        fontSize: '10px',
-        fontStyle: 'bold',
-      })
+      .text(
+        128,
+        68,
+        `${event.kind === 'calamity' ? 'CALAMITY' : 'ENVIRONMENT'} • ${event.title}`,
+        {
+          color: event.kind === 'calamity' ? '#ffad84' : '#9aefad',
+          fontFamily: 'monospace',
+          fontSize: '8px',
+          fontStyle: 'bold',
+        },
+      )
       .setOrigin(0.5);
     const body = this.add
-      .text(128, 84, 'WILSON RIVER CROSSING\nCHOOSE YOUR RISK:', {
+      .text(128, 91, event.description, {
         align: 'center',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-        fontSize: '7px',
-        lineSpacing: 2,
-      })
-      .setOrigin(0.5);
-    const labels = [
-      'FORD (-2 HEALTH, +50 EXP, 25% LIFE RISK)',
-      'FLOAT (-2 MAGIC, +25 EXP, 10% LIFE RISK)',
-      'WAIT FOR ODOT  (SAFE)',
-    ];
-    this.calamityChoiceTexts = labels.map((label, index) =>
-      this.add
-        .text(128, 113 + index * 19, label, {
-          align: 'center',
-          fontFamily: 'monospace',
-          fontSize: '7px',
-          padding: { x: 4, y: 3 },
-        })
-        .setOrigin(0.5),
-    );
-    const hint = this.add
-      .text(128, 177, 'UP / DOWN: CHOOSE  •  A / ENTER: COMMIT', {
         color: '#ffffff',
         fontFamily: 'monospace',
         fontSize: '6px',
       })
       .setOrigin(0.5);
-    this.calamityChoiceIndex = 0;
-    this.calamity = this.add
-      .container(0, 0, [shade, title, body, ...this.calamityChoiceTexts, hint])
+    this.choiceTexts = event.choices.map((choice, index) =>
+      this.add
+        .text(128, 120 + index * 24, choice.label, {
+          color: '#ffffff',
+          fontFamily: 'monospace',
+          fontSize: '7px',
+          padding: { x: 5, y: 4 },
+        })
+        .setOrigin(0.5),
+    );
+    const hint = this.add
+      .text(128, 178, 'UP / DOWN: CHOOSE • A / ENTER: COMMIT', {
+        color: '#91b4c8',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      })
+      .setOrigin(0.5);
+    this.eventPanel = this.add
+      .container(0, 0, [shade, title, body, ...this.choiceTexts, hint])
       .setDepth(200);
-    this.refreshCalamityChoices();
+    this.refreshChoices();
   }
 
-  private refreshCalamityChoices(): void {
-    this.calamityChoiceTexts.forEach((text, index) => {
-      const selected = index === this.calamityChoiceIndex;
-      text
-        .setText(`${selected ? '▶' : ' '} ${text.text.replace(/^.? /, '')}`)
-        .setColor(selected ? '#f6d77a' : '#ffffff')
-        .setBackgroundColor(selected ? '#31485a' : '');
-    });
+  private updateEvent(): void {
+    if (!this.controls) return;
+    if (this.controls.actions.get('up').pressed) {
+      this.choiceIndex = Phaser.Math.Wrap(this.choiceIndex - 1, 0, 2);
+      this.refreshChoices();
+    }
+    if (this.controls.actions.get('down').pressed) {
+      this.choiceIndex = Phaser.Math.Wrap(this.choiceIndex + 1, 0, 2);
+      this.refreshChoices();
+    }
+    if (this.controls.actions.get('confirm').pressed) this.resolveEvent();
   }
 
-  private resolveCalamity(): void {
-    if (!this.calamity || !this.save) return;
-    const choice = WILSON_RIVER_CHOICES[this.calamityChoiceIndex];
-    if (!choice) return;
-    const outcome = resolveWilsonRiverChoice(
+  private resolveEvent(): void {
+    const route = LOCATION_ROUTES[this.routeIndex];
+    const event = this.activeEvent;
+    const choice = event?.choices[this.choiceIndex];
+    if (!route || !event || !choice || !this.save) return;
+    const outcome = resolveRouteChoice(
       {
         life: this.save.resources.life,
         magic: this.save.resources.magic,
@@ -270,9 +219,6 @@ export class Highway26Scene extends Phaser.Scene {
       choice,
       Math.random(),
     );
-    this.calamity.destroy(true);
-    this.calamity = undefined;
-    this.calamityChoiceTexts = [];
     this.save = {
       ...this.save,
       resources: {
@@ -284,30 +230,123 @@ export class Highway26Scene extends Phaser.Scene {
       stats: { ...this.save.stats, experience: outcome.experience },
       flags: {
         ...this.save.flags,
-        calamity_wilson_river_seen: true,
-        [outcome.flag]: true,
+        [routeEventFlag(route.locationId, event.id)]: true,
       },
       savedAt: new Date().toISOString(),
     };
     this.repository.save(this.save);
+    this.eventPanel?.destroy(true);
+    this.eventPanel = undefined;
+    this.activeEvent = undefined;
+    this.choiceTexts = [];
     if (outcome.lives === 0) {
-      this.calamityGameOver = true;
-      this.locationText?.setText(
-        'FINAL LIFE LOST • GAME OVER • ENTER / A: RECOVER HOME (-25% EXP)',
+      this.gameOver = true;
+      this.message?.setText('FINAL LIFE LOST • A / ENTER: RECOVER HOME');
+    } else
+      this.message?.setText(
+        `${choice.summary.toUpperCase()}${outcome.lostLife ? ' • LIFE LOST!' : ''}`,
       );
-    } else this.locationText?.setText(outcome.summary);
   }
 
-  private refreshLocation(): void {
-    const point = ROUTE[this.routeIndex];
-    if (!point || !this.locationText) return;
-    if (this.routeIndex === 0) {
-      this.locationText.setText('ROCKAWAY BEACH • ESC TO RETURN HOME');
-    } else {
-      const location = BOSS_LOCATIONS[this.routeIndex - 1];
-      this.locationText.setText(
-        `${location?.label ?? point.label} • ENTER / A: BOSS FIGHT`,
+  private refreshChoices(): void {
+    this.choiceTexts.forEach((text, index) => {
+      const selected = index === this.choiceIndex;
+      text
+        .setColor(selected ? '#f6d77a' : '#ffffff')
+        .setBackgroundColor(selected ? '#27485d' : '')
+        .setText(
+          `${selected ? '▶ ' : ''}${this.activeEvent?.choices[index]?.label ?? ''}`,
+        );
+    });
+  }
+
+  private clearMap(): void {
+    this.graphics?.destroy();
+    this.marker?.destroy();
+    this.labels.forEach((label) => label.destroy());
+    this.labels = [];
+    this.graphics = this.add.graphics();
+    this.graphics.fillStyle(0xd9b76d).fillRoundedRect(8, 30, 240, 174, 5);
+  }
+
+  private drawRouteMenu(): void {
+    this.clearMap();
+    const g = this.graphics!;
+    LOCATION_ROUTES.forEach((route, index) => {
+      const y = 51 + index * 31;
+      const location = BOSS_LOCATIONS[index];
+      const selected = index === this.routeIndex;
+      const complete =
+        location !== undefined && this.save?.relics.includes(location.crystalId);
+      g.lineStyle(selected ? 3 : 1, selected ? 0xf6d77a : 0x76583c);
+      g.lineBetween(28, 116, 186, y);
+      g.fillStyle(complete ? 0xf6d77a : selected ? 0x2c7794 : 0x17374c)
+        .fillCircle(194, y, selected ? 7 : 5);
+      this.labels.push(
+        this.add
+          .text(238, y, route.label.replace(' ROUTE', ''), {
+            color: selected ? '#08111d' : '#355065',
+            fontFamily: 'monospace',
+            fontSize: '5px',
+            fontStyle: selected ? 'bold' : 'normal',
+          })
+          .setOrigin(1, 0.5),
       );
-    }
+    });
+    g.fillStyle(0x175574).fillCircle(28, 116, 8);
+    this.heading?.setText('CHOOSE A DESTINATION ROUTE');
+    this.message?.setText('UP / DOWN: ROUTE • A / ENTER: DEPART • B / ESC: HOME');
+    this.marker = this.add
+      .circle(194, 51 + this.routeIndex * 31, 3, 0xffffff)
+      .setStrokeStyle(1, 0x08111d);
+  }
+
+  private drawJourney(): void {
+    const route = LOCATION_ROUTES[this.routeIndex];
+    if (!route) return;
+    this.clearMap();
+    const g = this.graphics!;
+    g.fillStyle(0x285c3e);
+    for (let x = 9; x < 250; x += 22)
+      g.fillTriangle(x, 201, x + 10, 169, x + 20, 201);
+    g.lineStyle(5, 0x785738).lineBetween(NODE_X[0], 148, NODE_X[4], 84);
+    g.lineStyle(2, 0xf0d492).lineBetween(NODE_X[0], 148, NODE_X[4], 84);
+    NODE_X.forEach((x, index) => {
+      const event = route.events[index - 1];
+      const resolved =
+        event !== undefined &&
+        Boolean(this.save?.flags[routeEventFlag(route.locationId, event.id)]);
+      g.fillStyle(index === 4 ? 0x8f3e38 : resolved ? 0xf6d77a : 0x17374c)
+        .fillCircle(x, this.nodeY(index), index === 4 ? 7 : 5);
+    });
+    this.marker = this.add
+      .circle(NODE_X[0], this.nodeY(0), 4, 0xffffff)
+      .setStrokeStyle(2, 0x08111d);
+    this.labels.push(
+      this.add.text(197, 60, 'BOSS + CRYSTAL', {
+        color: '#7b2929',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+      }),
+    );
+    this.heading?.setText(route.label);
+    this.message?.setText('RIGHT / A: ADVANCE • LEFT: BACK • B / ESC: ROUTES');
+  }
+
+  private moveMarker(): void {
+    const x = NODE_X[this.nodeIndex];
+    if (x === undefined || !this.marker) return;
+    this.tweens.add({
+      targets: this.marker,
+      x,
+      y: this.nodeY(this.nodeIndex),
+      duration: 150,
+    });
+    if (this.nodeIndex === 4)
+      this.message?.setText('DESTINATION REACHED • A / ENTER: BOSS BATTLE');
+  }
+
+  private nodeY(index: number): number {
+    return 148 - index * 16;
   }
 }
