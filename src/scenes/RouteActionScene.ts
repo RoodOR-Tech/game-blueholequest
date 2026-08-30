@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
+import { BUDDA_TEXTURE_KEY, ensureBuddaTexture } from '../actors/budda';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { bossLocationById, type BossLocationId } from '../game/progression/bossLocations';
 import { routeEventFlag, routeForLocation } from '../game/progression/locationRoutes';
+import { BUDDA_ACHIEVEMENT, BUDDA_ENCOUNTERS, buddaFlag, discoverBudda, foundBuddaCount } from '../game/progression/budda';
 import {
   routeActionFor,
   type RouteActionDefinition,
@@ -45,6 +47,7 @@ export class RouteActionScene extends Phaser.Scene {
   private sequenceOver = false;
   private knockedOut = false;
   private gameOver = false;
+  private budda?: Phaser.GameObjects.Sprite;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -68,6 +71,7 @@ export class RouteActionScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, 512, 240);
     this.drawWorld();
     this.createTextures();
+    ensureBuddaTexture(this);
     this.controls = new PhaserInput(this);
     new TouchControls(this, this.controls, {
       primary: 'jump',
@@ -97,6 +101,10 @@ export class RouteActionScene extends Phaser.Scene {
       this.spawnEnemy(x, 145, true),
     );
     this.createEnvironmentMechanic();
+    if (!this.save.flags[buddaFlag(this.locationId)]) {
+      const x = { hillsboro_west: 118, hillsboro_east: 202, milwaukie: 282, walla_walla: 366, bend: 444 }[this.locationId];
+      this.budda = this.add.sprite(x, 202, BUDDA_TEXTURE_KEY).setScale(1.15).setDepth(3);
+    }
     this.createHud();
   }
 
@@ -141,8 +149,23 @@ export class RouteActionScene extends Phaser.Scene {
     }
     this.updateEnemies(time);
     this.updateEnvironmentMechanic(time);
+    this.updateBudda();
     if (this.player.x >= 482) this.completeSequence();
     if (this.controls.actions.get('cancel').pressed) this.returnToRoute();
+  }
+
+  private updateBudda(): void {
+    if (!this.budda || !this.player || !this.save || !this.message) return;
+    if (Phaser.Math.Distance.Between(this.player.x, this.player.y, this.budda.x, this.budda.y) > 25) return;
+    const before = foundBuddaCount(this.save);
+    this.save = discoverBudda(this.save, this.locationId, new Date().toISOString());
+    if (foundBuddaCount(this.save) === before) return;
+    this.repository.save(this.save);
+    const encounter = BUDDA_ENCOUNTERS[this.locationId];
+    const completed = this.save.inventory.includes(BUDDA_ACHIEVEMENT);
+    this.message.setText(`BUDDA: ${encounter.line} • ${encounter.reward} • ${foundBuddaCount(this.save)}/6 FOUND${completed ? ' • NINE BUZZED LIVES UNLOCKED!' : ''}`);
+    this.budda.setTint(0xf6d77a);
+    this.refreshHud();
   }
 
   private resetState(): void {
