@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { BUDDA_TEXTURE_KEY, ensureBuddaTexture } from '../actors/budda';
+import { applyTeamAppearance } from '../actors/teamAppearance';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { bossLocationById, type BossLocationId } from '../game/progression/bossLocations';
@@ -90,6 +91,7 @@ export class RouteActionScene extends Phaser.Scene {
       .setGravityY(430)
       .setCollideWorldBounds(true)
       .play('dad-idle');
+    applyTeamAppearance(this.player, this.save.activeTeamId);
     this.player.body.setSize(210, 500).setOffset(30, 150);
     this.physics.add.collider(this.player, floor);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
