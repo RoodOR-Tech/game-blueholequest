@@ -37,7 +37,6 @@ export class ForestQuestScene extends Phaser.Scene {
   private enemies: ForestEnemy[] = [];
   private bossEnemy?: ForestEnemy;
   private bossFightActive = false;
-  private brambles: Phaser.GameObjects.Rectangle[] = [];
   private facing: -1 | 1 = 1;
   private lastGroundedAt = 0;
   private jumpBufferedUntil = 0;
@@ -137,7 +136,6 @@ export class ForestQuestScene extends Phaser.Scene {
     this.enemies = [];
     this.bossEnemy = undefined;
     this.bossFightActive = false;
-    this.brambles = [];
     this.facing = 1;
     this.lastGroundedAt = 0;
     this.jumpBufferedUntil = 0;
@@ -220,7 +218,6 @@ export class ForestQuestScene extends Phaser.Scene {
     this.updateEnemies(time);
     if (!this.bossFightActive && this.player.x >= 395) this.startBossFight();
     if (this.bossFightActive && this.player.x < 390) this.player.x = 390;
-    this.checkHazards(time);
     if (this.controls.actions.get('cancel').pressed)
       this.scene.start('highway-26');
   }
@@ -307,19 +304,6 @@ export class ForestQuestScene extends Phaser.Scene {
       )
         this.damagePlayer(time, Math.sign(distance) || 1);
     });
-  }
-
-  private checkHazards(time: number): void {
-    if (!this.player || time < this.invulnerableUntil) return;
-    if (
-      this.brambles.some((bramble) =>
-        Phaser.Geom.Intersects.RectangleToRectangle(
-          this.player!.getBounds(),
-          bramble.getBounds(),
-        ),
-      )
-    )
-      this.damagePlayer(time, this.player.x < 276 ? -1 : 1);
   }
 
   private startBossFight(): void {
@@ -461,11 +445,6 @@ export class ForestQuestScene extends Phaser.Scene {
     graphics.fillStyle(0x31472f).fillRect(0, FLOOR_Y, WORLD_WIDTH, 22);
     graphics.fillStyle(0x6b5133).fillRoundedRect(111, 193, 48, 11, 4);
     graphics.fillStyle(0x204d42).fillCircle(405, 189, 22);
-    this.brambles = [
-      this.add.rectangle(276, 209, 35, 15, 0x5c382b),
-      this.add.rectangle(370, 211, 24, 11, 0x5c382b),
-    ];
-    this.brambles.forEach((bramble) => bramble.setStrokeStyle(2, 0xb17a42));
     this.add.text(18, 57, 'LANTERN TRAIL', {
       color: '#ffe59a',
       fontFamily: 'monospace',
