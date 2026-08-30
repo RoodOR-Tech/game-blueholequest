@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
-import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
 import { BUDDA_TEXTURE_KEY, ensureBuddaTexture } from '../actors/budda';
-import { applyTeamAppearance } from '../actors/teamAppearance';
+import { configurePlayerBody, playerVisual } from '../actors/familyAnimations';
 import { getTeam } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { CHECKPOINTS, saveAtCheckpoint } from '../game/progression/checkpoints';
@@ -85,7 +84,8 @@ export class BlueHoleHubScene extends Phaser.Scene {
       direction.y * PLAYER_SPEED,
     );
     if (horizontal !== 0) this.player.setFlipX(horizontal < 0);
-    this.player.play(direction.lengthSq() > 0 ? 'dad-walk' : 'dad-idle', true);
+    const visual = playerVisual(this.save.activeTeamId);
+    this.player.play(direction.lengthSq() > 0 ? visual.walk : visual.idle, true);
 
     const fixture = this.nearestFixture();
     this.prompt?.setVisible(Boolean(fixture));
@@ -149,18 +149,19 @@ export class BlueHoleHubScene extends Phaser.Scene {
   }
 
   private createPlayer(): void {
+    if (!this.save) return;
+    const visual = playerVisual(this.save.activeTeamId);
     const player = this.physics.add.sprite(
       128,
       190,
-      DAD_TEXTURE_KEY,
-      'dad-idle-0',
+      visual.texture,
+      visual.frame,
     );
     player
-      .setScale(DAD_SPRITE_SCALE)
+      .setScale(visual.scale)
       .setCollideWorldBounds(true)
-      .play('dad-idle');
-    if (this.save) applyTeamAppearance(player, this.save.activeTeamId);
-    player.body.setSize(210, 500).setOffset(30, 150);
+      .play(visual.idle);
+    configurePlayerBody(player, this.save.activeTeamId);
     this.player = player;
   }
 
