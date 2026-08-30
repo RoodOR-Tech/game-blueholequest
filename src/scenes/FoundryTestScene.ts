@@ -52,6 +52,7 @@ export class FoundryTestScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.resetEncounterState();
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
@@ -129,6 +130,21 @@ export class FoundryTestScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.scene.start('highway-26'));
+  }
+
+  private resetEncounterState(): void {
+    this.droneHealth = { current: 3, maximum: 3 };
+    this.facing = 1;
+    this.lastGroundedAt = 0;
+    this.jumpBufferedUntil = 0;
+    this.nextAttackAt = 0;
+    this.attackingUntil = 0;
+    this.nextDroneAttackAt = 900;
+    this.droneChargingUntil = 0;
+    this.playerInvulnerableUntil = 0;
+    this.combatOver = false;
+    this.knockedOut = false;
+    this.gameOver = false;
   }
 
   update(time: number): void {
