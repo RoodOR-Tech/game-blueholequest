@@ -17,11 +17,22 @@ export function resolveKnockout(
       ...save,
       resources: {
         ...save.resources,
-        life: gameOver ? 0 : save.resources.maxLife,
+        life: 0,
         lives,
       },
       savedAt,
     },
+  };
+}
+
+export function prepareCheckpointRetry(
+  save: SaveData,
+  savedAt: string,
+): SaveData {
+  return {
+    ...save,
+    resources: { ...save.resources, life: save.resources.maxLife },
+    savedAt,
   };
 }
 
@@ -42,4 +53,3 @@ export function recoverFromGameOver(save: SaveData, savedAt: string): SaveData {
     savedAt,
   };
 }
-
