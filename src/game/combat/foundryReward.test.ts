@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createNewSave } from '../saves/schema';
-import { awardFoundryVictory } from './foundryReward';
+import { awardFoundryVictory, FOUNDRY_RELIC_ID } from './foundryReward';
 
 describe('awardFoundryVictory', () => {
   it('grants Power Wrench and 100 experience on the first victory', () => {
@@ -8,6 +8,7 @@ describe('awardFoundryVictory', () => {
     expect(result.firstVictory).toBe(true);
     expect(result.save.stats.experience).toBe(100);
     expect(result.save.techniques).toContain('power_wrench');
+    expect(result.save.relics).toContain(FOUNDRY_RELIC_ID);
     expect(result.save.flags.foundry_drone_defeated).toBe(true);
   });
 
@@ -17,6 +18,6 @@ describe('awardFoundryVictory', () => {
     expect(second.firstVictory).toBe(false);
     expect(second.save.stats.experience).toBe(100);
     expect(second.save.techniques).toEqual(['power_wrench']);
+    expect(second.save.relics).toEqual([FOUNDRY_RELIC_ID]);
   });
 });
-
