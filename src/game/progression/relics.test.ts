@@ -5,10 +5,10 @@ describe('recoveredRelicCount', () => {
   it('counts only canonical relics and ignores duplicates', () => {
     expect(
       recoveredRelicCount([
-        'crystal_hillsboro_west',
-        'crystal_hillsboro_west',
+        'relic_crystal_hound',
+        'relic_crystal_hound',
         'unknown_relic',
-        'crystal_walla_walla',
+        'relic_emerald_leaf',
       ]),
     ).toBe(2);
   });
