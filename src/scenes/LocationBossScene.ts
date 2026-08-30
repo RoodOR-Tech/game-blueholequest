@@ -4,6 +4,7 @@ import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import {
   awardLocationCrystal,
+  BOSS_LOCATIONS,
   bossLocationById,
   bossLocationForCheckpoint,
   type BossLocation,
@@ -454,8 +455,14 @@ export class LocationBossScene extends Phaser.Scene {
     );
     this.repository.save(this.save);
     this.encounterOver = true;
+    const currentIndex = BOSS_LOCATIONS.findIndex(
+      (location) => location.id === this.location.id,
+    );
+    const nextLocation = BOSS_LOCATIONS[currentIndex + 1];
     this.message?.setText(
-      `${this.location.crystalName} RECOVERED • +100 XP\nA: RETURN TO ROUTE`,
+      nextLocation
+        ? `${this.location.crystalName} RECOVERED • +100 XP\nNEXT: ${nextLocation.label} • A: CONTINUE`
+        : `${this.location.crystalName} RECOVERED • +100 XP\nALL CRYSTALS FOUND • A: RETURN`,
     );
     this.refreshHud();
   }
