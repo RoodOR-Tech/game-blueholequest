@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from '../actors/dadAnimations';
+import { applyTeamAppearance } from '../actors/teamAppearance';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
 import {
@@ -87,6 +88,7 @@ export class LocationBossScene extends Phaser.Scene {
       .setScale(DAD_SPRITE_SCALE)
       .setCollideWorldBounds(true)
       .play('dad-idle');
+    applyTeamAppearance(this.player, this.save.activeTeamId);
     this.player.body.setSize(210, 500).setOffset(30, 150);
     this.boss = this.physics.add.sprite(205, 145, 'location-boss-sprite');
     const bossScale =
