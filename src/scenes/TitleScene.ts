@@ -105,7 +105,7 @@ export class TitleScene extends Phaser.Scene {
     if (!this.status || this.confirmingNewGame) return;
     this.status.setText(
       this.save && this.selectedIndex === 0
-        ? `RELICS ${this.save.relics.length}/5 • LIVES ${this.save.resources.lives}/${this.save.resources.maxLives} • XP ${this.save.stats.experience}`
+        ? `CRYSTALS ${this.save.relics.length}/5 • LIVES ${this.save.resources.lives}/${this.save.resources.maxLives} • XP ${this.save.stats.experience}`
         : this.save
           ? 'START OVER WITH A NEW FAMILY TEAM'
           : 'BEGIN A NEW ROOD HOLIDAY ADVENTURE',
