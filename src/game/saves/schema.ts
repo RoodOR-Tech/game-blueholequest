@@ -59,8 +59,21 @@ export function normalizeSaveData(value: unknown): SaveData | null {
     lives?: number;
     maxLives?: number;
   };
+  const defeatedBossCheckpoints: Readonly<Record<string, string>> = {
+    hillsboro_west_boss_entry: 'crystal_hillsboro_west',
+    hillsboro_east_boss_entry: 'crystal_hillsboro_east',
+    milwaukie_boss_entry: 'crystal_milwaukie',
+    walla_walla_boss_entry: 'crystal_walla_walla',
+    bend_boss_entry: 'crystal_bend',
+  };
+  const checkpointCrystal = defeatedBossCheckpoints[value.checkpointId];
+  const checkpointId =
+    checkpointCrystal && value.relics.includes(checkpointCrystal)
+      ? 'connected_quest_route'
+      : value.checkpointId;
   return {
     ...value,
+    checkpointId,
     resources: {
       ...value.resources,
       lives: legacyResources.lives ?? 3,
@@ -85,4 +98,3 @@ export function isSaveData(value: unknown): value is SaveData {
     Array.isArray(candidate.inventory)
   );
 }
-
