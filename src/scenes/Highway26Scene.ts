@@ -33,6 +33,7 @@ export class Highway26Scene extends Phaser.Scene {
   private labels: Phaser.GameObjects.Text[] = [];
   private heading?: Phaser.GameObjects.Text;
   private message?: Phaser.GameObjects.Text;
+  private departButton?: Phaser.GameObjects.Text;
   private eventPanel?: Phaser.GameObjects.Container;
   private activeEvent?: RouteEvent;
   private choiceIndex = 0;
@@ -120,9 +121,7 @@ export class Highway26Scene extends Phaser.Scene {
   private updateMenu(): void {
     if (!this.controls) return;
     if (this.controls.actions.get('confirm').pressed) {
-      this.traveling = true;
-      this.nodeIndex = 0;
-      this.drawJourney();
+      this.beginJourney();
     }
     if (this.controls.actions.get('cancel').pressed)
       this.scene.start('blue-hole-hub');
@@ -133,15 +132,7 @@ export class Highway26Scene extends Phaser.Scene {
     const advance =
       this.controls.actions.get('right').pressed ||
       this.controls.actions.get('confirm').pressed;
-    if (advance && this.nodeIndex < 4) {
-      this.nodeIndex += 1;
-      this.moveMarker();
-      if (this.nodeIndex <= 3) this.openEvent();
-    } else if (advance && this.nodeIndex === 4) {
-      const route = LOCATION_ROUTES[this.routeIndex];
-      if (route)
-        this.scene.start('location-boss', { locationId: route.locationId });
-    }
+    if (advance) this.advanceRouteNode();
     if (this.controls.actions.get('left').pressed && this.nodeIndex > 0) {
       this.nodeIndex -= 1;
       this.moveMarker();
@@ -291,6 +282,8 @@ export class Highway26Scene extends Phaser.Scene {
     this.marker?.destroy();
     this.labels.forEach((label) => label.destroy());
     this.labels = [];
+    this.departButton?.destroy();
+    this.departButton = undefined;
     this.graphics = this.add.graphics();
     this.graphics.fillStyle(0xd9b76d).fillRoundedRect(8, 30, 240, 174, 5);
   }
@@ -434,6 +427,45 @@ export class Highway26Scene extends Phaser.Scene {
         0xffffff,
       )
       .setStrokeStyle(1, 0x08111d);
+    if (route) {
+      this.departButton = this.add
+        .text(
+          128,
+          198,
+          `START ${route.label.replace(' ROUTE', '')} ROUTE`,
+          {
+            align: 'center',
+            backgroundColor: '#173f57ee',
+            color: '#f6d77a',
+            fontFamily: 'monospace',
+            fontSize: '6px',
+            fontStyle: 'bold',
+            padding: { x: 7, y: 4 },
+          },
+        )
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => this.beginJourney());
+    }
+  }
+
+  private beginJourney(): void {
+    if (!LOCATION_ROUTES[this.routeIndex]) return;
+    this.traveling = true;
+    this.nodeIndex = 0;
+    this.drawJourney();
+  }
+
+  private advanceRouteNode(): void {
+    if (this.nodeIndex < 4) {
+      this.nodeIndex += 1;
+      this.moveMarker();
+      if (this.nodeIndex <= 3) this.openEvent();
+      return;
+    }
+    const route = LOCATION_ROUTES[this.routeIndex];
+    if (route)
+      this.scene.start('location-boss', { locationId: route.locationId });
   }
 
   private drawJourney(): void {
@@ -464,6 +496,19 @@ export class Highway26Scene extends Phaser.Scene {
         fontSize: '5px',
       }),
     );
+    this.departButton = this.add
+      .text(128, 198, 'ADVANCE TO NEXT STOP', {
+        align: 'center',
+        backgroundColor: '#173f57ee',
+        color: '#f6d77a',
+        fontFamily: 'monospace',
+        fontSize: '6px',
+        fontStyle: 'bold',
+        padding: { x: 7, y: 4 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.advanceRouteNode());
     this.heading?.setText(route.label);
     this.message?.setText('RIGHT / A: ADVANCE • LEFT: BACK • B / ESC: ROUTES');
   }
