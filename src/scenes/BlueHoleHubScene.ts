@@ -21,6 +21,7 @@ import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
 import { HighScoreRepository } from '../game/saves/highScores';
+import { sharpenSceneText } from '../ui/textClarity';
 
 const PLAYER_SPEED = 58;
 const INTERACTION_DISTANCE = 31;
@@ -78,6 +79,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
       this.controls = new PhaserInput(this);
       new TouchControls(this, this.controls);
       this.createPostGameMenu();
+      sharpenSceneText(this);
       return;
     }
     this.homecomingArtifact = pendingHomecomingArtifact(this.save);
@@ -99,6 +101,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
     this.refreshHud();
     this.refreshMantle();
     if (this.homecomingArtifact) this.presentHomecoming();
+    sharpenSceneText(this);
   }
 
   update(): void {
@@ -416,6 +419,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
       align: 'center', backgroundColor: '#07111c', color: '#f6d77a', fontFamily: 'monospace', fontSize: '7px', lineSpacing: 3,
       padding: { x: 14, y: 10 },
     }).setOrigin(0.5).setDepth(600);
+    sharpenSceneText(this);
   }
 }
 

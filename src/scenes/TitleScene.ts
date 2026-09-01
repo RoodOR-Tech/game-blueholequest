@@ -6,6 +6,7 @@ import { sceneForCheckpoint } from '../game/progression/checkpoints';
 import { sanitizeGamepads } from '../game/input/PhaserInput';
 import { HighScoreRepository } from '../game/saves/highScores';
 import { getTeam } from '../content/teams';
+import { sharpenSceneText } from '../ui/textClarity';
 
 const COLORS = {
   ocean: 0x176eb0,
@@ -38,6 +39,7 @@ export class TitleScene extends Phaser.Scene {
     this.drawBackdrop();
     this.drawHighScores();
     this.createMenu();
+    sharpenSceneText(this);
     this.input.keyboard?.on('keydown-UP', this.selectPrevious);
     this.input.keyboard?.on('keydown-W', this.selectPrevious);
     this.input.keyboard?.on('keydown-DOWN', this.selectNext);
@@ -68,7 +70,7 @@ export class TitleScene extends Phaser.Scene {
       this.add
         .text(128, 183 + index * 24, label, {
           align: 'center',
-          backgroundColor: '#08111ddd',
+          backgroundColor: '#08111d',
           fontFamily: 'monospace',
           fontSize: '9px',
           fontStyle: 'bold',
@@ -90,7 +92,7 @@ export class TitleScene extends Phaser.Scene {
     this.status = this.add
       .text(128, 231, '', {
         align: 'center',
-        backgroundColor: '#08111dcc',
+        backgroundColor: '#08111d',
         color: '#ffffff',
         fontFamily: 'monospace',
         fontSize: '6px',
@@ -132,7 +134,7 @@ export class TitleScene extends Phaser.Scene {
       const selected = index === this.selectedIndex;
       option
         .setColor(selected ? '#f6d77a' : '#ffffff')
-        .setBackgroundColor(selected ? '#173f57ee' : '#08111ddd')
+        .setBackgroundColor(selected ? '#173f57' : '#08111d')
         .setText(`${selected ? '▶ ' : ''}${option.text.replace(/^▶ /, '')}`);
     });
     if (!this.status || this.confirmingNewGame) return;
@@ -152,7 +154,7 @@ export class TitleScene extends Phaser.Scene {
       (entry, index) => `${index + 1}. ${getTeam(entry.teamId).displayName.toUpperCase()}  ${entry.score}`,
     );
     this.add.text(249, 84, `HIGH SCORES\n${lines.join('\n')}`, {
-      align: 'right', backgroundColor: '#08111ddd', color: '#f6d77a', fontFamily: 'monospace', fontSize: '5px', lineSpacing: 2, padding: { x: 4, y: 3 },
+      align: 'right', backgroundColor: '#08111d', color: '#f6d77a', fontFamily: 'monospace', fontSize: '6px', lineSpacing: 2, padding: { x: 4, y: 3 },
     }).setOrigin(1, 0);
   }
 
@@ -251,7 +253,7 @@ export class TitleScene extends Phaser.Scene {
     this.add
       .text(128, 69, 'A ROOD FAMILY HOLIDAY ADVENTURE', {
         align: 'center',
-        backgroundColor: '#173f57cc',
+        backgroundColor: '#173f57',
         color: '#ffffff',
         fontFamily: 'monospace',
         fontSize: '7px',
