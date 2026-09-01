@@ -25,8 +25,5 @@ body {
 canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  font-smooth: never;
-  -webkit-font-smoothing: none;
   touch-action: none;
 }
-
