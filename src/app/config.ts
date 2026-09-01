@@ -10,6 +10,7 @@ import { LocationArrivalScene } from '../scenes/LocationArrivalScene';
 import { RouteActionScene } from '../scenes/RouteActionScene';
 import { TeamSelectScene } from '../scenes/TeamSelectScene';
 import { TitleScene } from '../scenes/TitleScene';
+import { VictoryCelebrationScene } from '../scenes/VictoryCelebrationScene';
 
 export const WORLD_WIDTH = 256;
 export const WORLD_HEIGHT = 240;
@@ -34,6 +35,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     FoundryTestScene,
     LocationBossScene,
     RouteActionScene,
+    VictoryCelebrationScene,
   ],
   physics: {
     default: 'arcade',
