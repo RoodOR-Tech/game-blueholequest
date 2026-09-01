@@ -9,6 +9,7 @@ import {
   registerFamilyAnimations,
 } from '../actors/familyAnimations';
 import { preloadBuddaSprites } from '../actors/budda';
+import { installGameTextClarity } from '../ui/textClarity';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -24,6 +25,7 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     registerDadAnimations(this);
     registerFamilyAnimations(this);
+    installGameTextClarity(this.game);
     this.scene.start('title');
   }
 }
