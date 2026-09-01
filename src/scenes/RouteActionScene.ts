@@ -218,6 +218,9 @@ export class RouteActionScene extends Phaser.Scene {
       if (!this.player.body.blocked.down)
         this.player.setTexture(visual.jumpTexture, visual.jumpFrame);
       else this.player.play(horizontal ? visual.walk : visual.idle, true);
+      // Phaser updates sprite frame dimensions during animation changes; restore
+      // the fixed feet-aligned body so every pose lands on the same plane.
+      configurePlayerBody(this.player, this.save.activeTeamId);
     }
     this.updateEnemies(time);
     this.updateEnvironmentMechanic(time);
@@ -462,6 +465,11 @@ export class RouteActionScene extends Phaser.Scene {
         ease: 'Sine.easeInOut',
         yoyo: true,
         repeat: -1,
+        onUpdate: () => {
+          // Keep the Arcade body on the rendered platform. Without this sync a
+          // tween can leave an invisible collision plane at an earlier position.
+          body.updateFromGameObject();
+        },
       });
       if (this.locationId === 'milwaukie')
         this.add.circle(data.x, data.y + 5, 4, 0x9deafa, 0.5).setDepth(3);
