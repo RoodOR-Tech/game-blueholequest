@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameAudio } from '../audio/GameAudio';
 import {
   BUDDA_SPRITE_SCALE,
   BUDDA_TEXTURE_KEY,
@@ -9,6 +10,10 @@ import { configurePlayerBody, playerVisual } from '../actors/familyAnimations';
 import { getTeam } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { CHECKPOINTS, saveAtCheckpoint } from '../game/progression/checkpoints';
+import {
+  celebrateHomecoming,
+  pendingHomecomingArtifact,
+} from '../game/progression/bossLocations';
 import { recoveredRelicCount, RELIC_IDS } from '../game/progression/relics';
 import { BUDDA_ENCOUNTERS, buddaFlag, discoverBudda, foundBuddaCount } from '../game/progression/budda';
 import { SaveRepository } from '../game/saves/repository';
@@ -41,6 +46,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
   private message?: Phaser.GameObjects.Text;
   private hud?: Phaser.GameObjects.Text;
   private mantleSockets: Phaser.GameObjects.Arc[] = [];
+  private homecomingArtifact?: ReturnType<typeof pendingHomecomingArtifact>;
   private save?: SaveData;
   private readonly repository = new SaveRepository(window.localStorage);
 
@@ -49,16 +55,16 @@ export class BlueHoleHubScene extends Phaser.Scene {
   }
 
   create(): void {
+    gameAudio.bind(this, 'title');
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
       return;
     }
-    this.save = saveAtCheckpoint(
-      this.save,
-      CHECKPOINTS.home,
-      new Date().toISOString(),
-    );
+    this.homecomingArtifact = pendingHomecomingArtifact(this.save);
+    this.save = this.homecomingArtifact
+      ? celebrateHomecoming(this.save, this.homecomingArtifact, new Date().toISOString())
+      : saveAtCheckpoint(this.save, CHECKPOINTS.home, new Date().toISOString());
     this.repository.save(this.save);
 
     this.drawRoom();
@@ -73,6 +79,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
     this.createInterface();
     this.refreshHud();
     this.refreshMantle();
+    if (this.homecomingArtifact) this.presentHomecoming();
   }
 
   update(): void {
@@ -218,7 +225,11 @@ export class BlueHoleHubScene extends Phaser.Scene {
   private interact(id: HubFixture['id']): void {
     if (!this.save || !this.message) return;
     if (id === 'exit') {
-      this.scene.start('highway-26');
+      this.scene.start(
+        recoveredRelicCount(this.save.relics) === RELIC_IDS.length
+          ? 'victory-celebration'
+          : 'highway-26',
+      );
       return;
     }
     if (id === 'fridge') {
@@ -277,4 +288,31 @@ export class BlueHoleHubScene extends Phaser.Scene {
       );
     });
   }
+
+  private presentHomecoming(): void {
+    if (!this.homecomingArtifact || !this.message) return;
+    const index = RELIC_IDS.indexOf(this.homecomingArtifact.artifactId);
+    const socket = this.mantleSockets[index];
+    if (socket) {
+      socket.setScale(0.25);
+      this.tweens.add({
+        targets: socket,
+        scale: 1.8,
+        duration: 420,
+        yoyo: true,
+        ease: 'Back.easeOut',
+      });
+    }
+    gameAudio.play('artifact');
+    this.cameras.main.flash(420, 255, 218, 112, false);
+    const allRecovered = recoveredRelicCount(this.save!.relics) === RELIC_IDS.length;
+    this.message.setText(
+      `WELCOME HOME, HERO!\n${this.homecomingArtifact.artifactName} NOW RESTS ON THE MANTEL.\nTHE FAMILY CHEERS • HEALTH & MAGIC RESTORED${
+        allRecovered
+          ? '\nALL FIVE ARTIFACTS ARE HOME • HEAD OUTSIDE FOR THE PARTY!'
+          : '\nWHEN READY, HEAD OUT FOR THE NEXT LOCATION.'
+      }`,
+    );
+  }
 }
+

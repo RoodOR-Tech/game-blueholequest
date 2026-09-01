@@ -481,26 +481,14 @@ export class LocationBossScene extends Phaser.Scene {
     const nextLocation = BOSS_LOCATIONS[currentIndex + 1];
     this.message?.setText(
       nextLocation
-        ? `${this.location.artifactName} RECOVERED • +100 XP\nNEXT: ${nextLocation.label} • A: CONTINUE`
-        : `${this.location.artifactName} RECOVERED • +100 XP\nALL ARTIFACTS FOUND • A: CELEBRATE!`,
+        ? `${this.location.artifactName} RECOVERED • +100 XP\nRETURN TO THE BLUE HOLE • A: GO HOME`
+        : `${this.location.artifactName} RECOVERED • +100 XP\nFINAL HOMECOMING • A: GO HOME`,
     );
     this.refreshHud();
   }
 
   private advanceToNextRoute(): void {
-    const currentIndex = BOSS_LOCATIONS.findIndex(
-      (location) => location.id === this.location.id,
-    );
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= BOSS_LOCATIONS.length) {
-      this.scene.start('victory-celebration');
-      return;
-    }
-    this.scene.start('highway-26', {
-      routeIndex: nextIndex,
-      nodeIndex: 0,
-      traveling: true,
-    });
+    this.scene.start('blue-hole-hub');
   }
 
   private createHud(): void {

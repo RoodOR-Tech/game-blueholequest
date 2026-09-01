@@ -118,3 +118,35 @@ export function isLocationUnlocked(
   const previous = BOSS_LOCATIONS[locationIndex - 1];
   return previous ? recovered.includes(previous.artifactId) : false;
 }
+
+export function pendingHomecomingArtifact(save: SaveData): BossLocation | undefined {
+  return [...BOSS_LOCATIONS]
+    .reverse()
+    .find(
+      (location) =>
+        save.relics.includes(location.artifactId) &&
+        !save.flags[`artifact_${location.id}_celebrated`],
+    );
+}
+
+export function celebrateHomecoming(
+  save: SaveData,
+  location: BossLocation,
+  savedAt: string,
+): SaveData {
+  return {
+    ...save,
+    checkpointId: 'rockaway_blue_hole',
+    resources: {
+      ...save.resources,
+      life: save.resources.maxLife,
+      magic: save.resources.maxMagic,
+    },
+    flags: {
+      ...save.flags,
+      [`artifact_${location.id}_celebrated`]: true,
+    },
+    savedAt,
+  };
+}
+
