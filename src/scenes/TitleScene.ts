@@ -51,7 +51,7 @@ export class TitleScene extends Phaser.Scene {
   private createMenu(): void {
     const labels = this.save ? ['CONTINUE', 'NEW GAME'] : ['NEW GAME'];
     this.add
-      .text(128, 151, 'CHOOSE YOUR PATH', {
+      .text(128, 168, 'CHOOSE YOUR PATH', {
         color: '#d8edf5',
         fontFamily: 'monospace',
         fontSize: '6px',
@@ -60,7 +60,7 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.options = labels.map((label, index) =>
       this.add
-        .text(128, 166 + index * 24, label, {
+        .text(128, 183 + index * 24, label, {
           align: 'center',
           backgroundColor: '#08111ddd',
           fontFamily: 'monospace',
@@ -82,7 +82,7 @@ export class TitleScene extends Phaser.Scene {
         }),
     );
     this.status = this.add
-      .text(128, 226, '', {
+      .text(128, 231, '', {
         align: 'center',
         backgroundColor: '#08111dcc',
         color: '#ffffff',
@@ -140,7 +140,7 @@ export class TitleScene extends Phaser.Scene {
 
   private drawBackdrop(): void {
     const graphics = this.add.graphics();
-    // Oregon coast at twilight: layered sky, mountains, forest, ocean, and the Blue Hole.
+    // Oregon coast at twilight, looking toward the family's small Rockaway cabin.
     graphics
       .fillGradientStyle(0x07162c, 0x07162c, 0x2f7394, 0x2f7394)
       .fillRect(0, 0, 256, 151);
@@ -164,10 +164,34 @@ export class TitleScene extends Phaser.Scene {
         graphics.beginPath().moveTo(x, y).lineTo(x + 10, y - 2).lineTo(x + 21, y).strokePath();
 
     graphics.fillStyle(COLORS.sand).fillRect(0, 171, 256, 69);
-    graphics.fillStyle(0xb98c4d).fillEllipse(128, 180, 153, 32);
-    graphics.fillStyle(0x09283b).fillEllipse(128, 176, 92, 29);
-    graphics.fillStyle(0x0b83b2).fillEllipse(128, 173, 78, 22);
-    graphics.lineStyle(2, 0x91edff, 0.8).strokeEllipse(128, 173, 67, 16);
+    graphics.fillStyle(0xb98c4d).fillEllipse(128, 181, 176, 29);
+
+    // The Blue Hole: a warm, weathered beach cabin—not a literal hole.
+    graphics.fillStyle(0x2a1b18).fillRect(91, 124, 75, 50);
+    graphics.fillStyle(0x704534).fillRect(94, 127, 69, 44);
+    graphics.lineStyle(1, 0x9b6a4c, 0.75);
+    for (let y = 131; y < 170; y += 7) graphics.lineBetween(95, y, 162, y);
+    graphics.fillStyle(0x38231d).fillTriangle(84, 127, 128, 94, 173, 127);
+    graphics.fillStyle(0x8a5740).fillTriangle(91, 124, 128, 99, 166, 124);
+    graphics.fillStyle(0x40271f).fillRect(139, 101, 9, 20);
+    graphics.fillStyle(0xc98c58).fillRect(117, 143, 22, 29);
+    graphics.fillStyle(0x2b1d19).fillRect(120, 146, 16, 26);
+    graphics.fillStyle(0xffcb62, 0.9).fillRect(100, 137, 12, 12).fillRect(146, 137, 11, 12);
+    graphics.lineStyle(2, 0x35231d).strokeRect(100, 137, 12, 12).strokeRect(146, 137, 11, 12);
+    graphics.lineBetween(106, 137, 106, 149).lineBetween(100, 143, 112, 143);
+    graphics.lineBetween(151, 137, 151, 149).lineBetween(146, 143, 157, 143);
+    graphics.fillStyle(0xd8c18b).fillRoundedRect(103, 116, 50, 12, 2);
+    graphics.lineStyle(1, 0x3b291f).strokeRoundedRect(103, 116, 50, 12, 2);
+    this.add
+      .text(128, 122, 'THE BLUE HOLE', {
+        color: '#173f57',
+        fontFamily: 'monospace',
+        fontSize: '5px',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    graphics.fillStyle(0x5c3929).fillRect(110, 172, 36, 3);
+    graphics.lineStyle(2, 0xc9a15e).lineBetween(124, 174, 117, 185).lineBetween(132, 174, 139, 185);
 
     // Dark Coast Range trees frame the logo without obscuring the menu.
     for (let x = -8; x < 55; x += 15)
@@ -182,8 +206,8 @@ export class TitleScene extends Phaser.Scene {
       graphics.fillStyle(0xffd66e).fillRoundedRect(x - 4, 111, 8, 10, 2);
     });
 
-    const shimmer = this.add.ellipse(128, 173, 66, 15, 0xb9f4ff, 0.12);
-    this.tweens.add({ targets: shimmer, scaleX: 1.24, alpha: 0.35, duration: 1300, yoyo: true, repeat: -1 });
+    const windowGlow = this.add.rectangle(128, 158, 12, 17, 0xffd474, 0.12);
+    this.tweens.add({ targets: windowGlow, alpha: 0.32, duration: 1200, yoyo: true, repeat: -1 });
 
     graphics.fillStyle(COLORS.panel, 0.96).fillRoundedRect(15, 14, 226, 66, 6);
     graphics.lineStyle(3, 0x173f57).strokeRoundedRect(15, 14, 226, 66, 6);
