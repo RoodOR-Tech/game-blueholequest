@@ -48,6 +48,7 @@ export class RouteActionScene extends Phaser.Scene {
   private knockedOut = false;
   private gameOver = false;
   private budda?: Phaser.GameObjects.Sprite;
+  private buddaPrompt?: Phaser.GameObjects.Text;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -103,8 +104,27 @@ export class RouteActionScene extends Phaser.Scene {
     );
     this.createEnvironmentMechanic();
     if (!this.save.flags[buddaFlag(this.locationId)]) {
-      const x = { hillsboro_west: 118, hillsboro_east: 202, milwaukie: 282, walla_walla: 366, bend: 444 }[this.locationId];
+      const preferredX = { hillsboro_west: 118, hillsboro_east: 202, milwaukie: 282, walla_walla: 366, bend: 444 }[this.locationId];
+      const occupied = [
+        ...this.definition.obstacleXs,
+        ...this.definition.enemyXs,
+        ...this.definition.flyingEnemyXs,
+      ];
+      const x = [preferredX, preferredX - 42, preferredX + 42, preferredX - 72]
+        .map((candidate) => Phaser.Math.Clamp(candidate, 65, 455))
+        .find((candidate) => occupied.every((other) => Math.abs(candidate - other) > 34)) ?? preferredX;
       this.budda = this.add.sprite(x, 202, BUDDA_TEXTURE_KEY).setScale(1.15).setDepth(3);
+      this.buddaPrompt = this.add
+        .text(x, 176, 'BUDDA • A / B / ENTER: TALK', {
+          backgroundColor: '#08111df2',
+          color: '#f6d77a',
+          fontFamily: 'monospace',
+          fontSize: '6px',
+          padding: { x: 5, y: 3 },
+        })
+        .setOrigin(0.5)
+        .setDepth(20)
+        .setVisible(false);
     }
     this.createHud();
   }
@@ -114,7 +134,11 @@ export class RouteActionScene extends Phaser.Scene {
     this.controls.update(this.input.gamepad?.getPad(0));
     if (this.sequenceOver) {
       this.player.setVelocityX(0);
-      if (this.controls.actions.get('confirm').pressed) {
+      const continuePressed =
+        this.controls.actions.get('confirm').pressed ||
+        this.controls.actions.get('jump').pressed ||
+        this.controls.actions.get('attack').pressed;
+      if (continuePressed) {
         if (this.knockedOut) this.retry();
         else this.returnToRoute();
       }
@@ -158,8 +182,17 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private updateBudda(): void {
-    if (!this.budda || !this.player || !this.save || !this.message) return;
-    if (Phaser.Math.Distance.Between(this.player.x, this.player.y, this.budda.x, this.budda.y) > 25) return;
+    if (!this.budda || !this.player || !this.save || !this.message || !this.controls) return;
+    const nearby =
+      Math.abs(this.player.x - this.budda.x) <= 34 &&
+      Math.abs(this.player.y - this.budda.y) <= 52;
+    this.buddaPrompt?.setVisible(nearby);
+    if (!nearby) return;
+    const interactPressed =
+      this.controls.actions.get('confirm').pressed ||
+      this.controls.actions.get('jump').pressed ||
+      this.controls.actions.get('attack').pressed;
+    if (!interactPressed) return;
     const before = foundBuddaCount(this.save);
     this.save = discoverBudda(this.save, this.locationId, new Date().toISOString());
     if (foundBuddaCount(this.save) === before) return;
@@ -170,6 +203,9 @@ export class RouteActionScene extends Phaser.Scene {
       `BUDDA THE GINGER CAT\n“${encounter.line}”\nREWARD: ${encounter.reward}  •  FOUND ${foundBuddaCount(this.save)}/6${completed ? '\nNINE BUZZED LIVES UNLOCKED!' : ''}`,
     );
     this.budda.setTint(0xf6d77a);
+    this.buddaPrompt?.setVisible(false);
+    this.buddaPrompt?.destroy();
+    this.buddaPrompt = undefined;
     this.refreshHud();
   }
 
@@ -186,6 +222,8 @@ export class RouteActionScene extends Phaser.Scene {
     this.sequenceOver = false;
     this.knockedOut = false;
     this.gameOver = false;
+    this.budda = undefined;
+    this.buddaPrompt = undefined;
   }
 
   private createObstacle(
@@ -330,7 +368,7 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private updateEnemies(time: number): void {
-    if (!this.player) return;
+    if (!this.player || this.sequenceOver) return;
     this.enemies.forEach((enemy, index) => {
       if (!enemy.sprite.active) return;
       const distance = this.player!.x - enemy.sprite.x;
@@ -377,7 +415,7 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private damagePlayer(time: number, direction: number): void {
-    if (!this.player || !this.save) return;
+    if (!this.player || !this.save || this.sequenceOver) return;
     this.invulnerableUntil = time + 900;
     const result = applyDamage(
       { current: this.save.resources.life, maximum: this.save.resources.maxLife },
@@ -405,8 +443,8 @@ export class RouteActionScene extends Phaser.Scene {
     this.player.setVelocity(0, 0).setAngle(90).setAlpha(0.7).setTint(0xb94b4b);
     this.message?.setText(
       knockout.gameOver
-        ? 'GAME OVER • A: RECOVER HOME'
-        : `KNOCKED OUT • ${this.save.resources.lives} LIVES LEFT • A: RETRY`,
+        ? 'GAME OVER • A / B / ENTER: RECOVER HOME'
+        : `KNOCKED OUT • ${this.save.resources.lives} LIVES LEFT • A / B / ENTER: RETRY`,
     );
     this.refreshHud();
   }
@@ -444,7 +482,7 @@ export class RouteActionScene extends Phaser.Scene {
     this.repository.save(this.save);
     this.sequenceOver = true;
     this.player?.setVelocity(0, 0);
-    this.message?.setText('SEQUENCE CLEARED • +35 XP • A: RETURN TO ROUTE');
+    this.message?.setText('SEQUENCE CLEARED • +35 XP • A / B / ENTER: RETURN');
     this.refreshHud();
   }
 
