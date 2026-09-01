@@ -115,7 +115,7 @@ export class VictoryCelebrationScene extends Phaser.Scene {
     HEROES.forEach((teamId, index) => {
       const visual = playerVisual(teamId);
       const hero = this.add.sprite(38 + index * 45, 179, visual.texture, visual.frame).setDepth(20);
-      hero.setScale(teamId === 'dad_paula' ? 0.075 : 0.72).play(visual.idle);
+      hero.setScale(teamId === 'dad_paula' ? 0.12 : 0.72).play(visual.idle);
       this.tweens.add({ targets: hero, y: 174, angle: index % 2 ? 3 : -3, duration: 330 + index * 45, yoyo: true, repeat: -1, delay: index * 80 });
     });
     const budda = this.add.sprite(128, 199, BUDDA_TEXTURE_KEY).setScale(1.15).setDepth(22);
