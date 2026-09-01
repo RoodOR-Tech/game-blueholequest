@@ -132,18 +132,19 @@ export class VictoryCelebrationScene extends Phaser.Scene {
   }
 
   private createHeroes(): void {
+    const positions = [25, 76, 128, 180, 231] as const;
     HEROES.forEach((teamId, index) => {
       const visual = playerVisual(teamId);
-      const hero = this.add.sprite(38 + index * 45, 179, visual.texture, visual.frame).setDepth(20);
-      hero.setScale(teamId === 'dad_paula' ? 0.12 : 0.72).play(visual.idle);
+      const hero = this.add.sprite(positions[index]!, 178, visual.texture, visual.frame).setDepth(20);
+      hero.setScale(teamId === 'dad_paula' ? 0.105 : 0.13).play(visual.idle);
       this.tweens.add({ targets: hero, y: 174, angle: index % 2 ? 3 : -3, duration: 330 + index * 45, yoyo: true, repeat: -1, delay: index * 80 });
     });
     const budda = this.add
-      .sprite(128, 199, BUDDA_TEXTURE_KEY, buddaFrame('hillsboro_east'))
-      .setScale(BUDDA_SPRITE_SCALE)
+      .sprite(128, 204, BUDDA_TEXTURE_KEY, buddaFrame('hillsboro_east'))
+      .setScale(BUDDA_SPRITE_SCALE * 0.65)
       .setDepth(22);
     this.tweens.add({ targets: budda, angle: { from: -5, to: 5 }, duration: 280, yoyo: true, repeat: -1 });
-    this.add.text(128, 207, 'BUDDA APPROVES', { color: '#ffd68a', fontFamily: 'monospace', fontSize: '5px' }).setOrigin(0.5);
+    this.add.text(128, 214, 'BUDDA APPROVES', { color: '#ffd68a', fontFamily: 'monospace', fontSize: '5px' }).setOrigin(0.5);
   }
 
   private createArtifactDisplay(): void {

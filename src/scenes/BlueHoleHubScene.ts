@@ -20,6 +20,7 @@ import { BUDDA_ENCOUNTERS, buddaFlag, discoverBudda, foundBuddaCount } from '../
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
+import { HighScoreRepository } from '../game/saves/highScores';
 
 const PLAYER_SPEED = 58;
 const INTERACTION_DISTANCE = 31;
@@ -48,8 +49,13 @@ export class BlueHoleHubScene extends Phaser.Scene {
   private hud?: Phaser.GameObjects.Text;
   private mantleSockets: Phaser.GameObjects.Arc[] = [];
   private homecomingArtifact?: ReturnType<typeof pendingHomecomingArtifact>;
+  private postGameMode = false;
+  private postGameIndex = 0;
+  private postGameOptions: Phaser.GameObjects.Text[] = [];
+  private highScorePanel?: Phaser.GameObjects.Text;
   private save?: SaveData;
   private readonly repository = new SaveRepository(window.localStorage);
+  private readonly highScores = new HighScoreRepository(window.localStorage);
 
   constructor() {
     super('blue-hole-hub');
@@ -60,6 +66,18 @@ export class BlueHoleHubScene extends Phaser.Scene {
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
+      return;
+    }
+    if (
+      this.save.flags.quest_victory_celebrated &&
+      recoveredRelicCount(this.save.relics) === RELIC_IDS.length
+    ) {
+      this.postGameMode = true;
+      this.drawRoom();
+      this.refreshMantle();
+      this.controls = new PhaserInput(this);
+      new TouchControls(this, this.controls);
+      this.createPostGameMenu();
       return;
     }
     this.homecomingArtifact = pendingHomecomingArtifact(this.save);
@@ -84,8 +102,13 @@ export class BlueHoleHubScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (!this.controls || !this.player || !this.save) return;
+    if (!this.controls || !this.save) return;
     this.controls.update(this.input.gamepad?.getPad(0));
+    if (this.postGameMode) {
+      this.updatePostGameMenu();
+      return;
+    }
+    if (!this.player) return;
 
     const horizontal =
       Number(this.controls.actions.get('right').down) -
@@ -321,6 +344,78 @@ export class BlueHoleHubScene extends Phaser.Scene {
           : '\nWHEN READY, HEAD OUT FOR THE NEXT LOCATION.'
       }`,
     );
+  }
+
+  private createPostGameMenu(): void {
+    this.add.rectangle(128, 148, 224, 134, 0x08111d, 0.96).setStrokeStyle(3, 0xf6d77a);
+    this.add.text(128, 96, 'THE QUEST IS COMPLETE', {
+      color: '#73ddff', fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.add.text(128, 112, `FINAL SCORE • ${this.save?.stats.score ?? 0}`, {
+      color: '#ffffff', fontFamily: 'monospace', fontSize: '7px',
+    }).setOrigin(0.5);
+    this.postGameOptions = ['SEE HIGH SCORES', 'START NEW GAME'].map((label, index) =>
+      this.add.text(128, 145 + index * 30, label, {
+        align: 'center', fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', padding: { x: 12, y: 6 },
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        this.postGameIndex = index;
+        this.activatePostGameOption();
+      }),
+    );
+    this.add.text(128, 207, 'UP / DOWN • A / ENTER: CHOOSE', {
+      color: '#bfeaff', fontFamily: 'monospace', fontSize: '6px',
+    }).setOrigin(0.5);
+    this.refreshPostGameMenu();
+  }
+
+  private updatePostGameMenu(): void {
+    if (!this.controls) return;
+    if (this.highScorePanel) {
+      if (
+        this.controls.actions.get('confirm').pressed ||
+        this.controls.actions.get('cancel').pressed ||
+        this.controls.actions.get('jump').pressed
+      ) {
+        this.highScorePanel.destroy();
+        this.highScorePanel = undefined;
+      }
+      return;
+    }
+    if (this.controls.actions.get('up').pressed || this.controls.actions.get('down').pressed) {
+      this.postGameIndex = this.postGameIndex === 0 ? 1 : 0;
+      gameAudio.play('select');
+      this.refreshPostGameMenu();
+    }
+    if (this.controls.actions.get('confirm').pressed || this.controls.actions.get('jump').pressed)
+      this.activatePostGameOption();
+  }
+
+  private refreshPostGameMenu(): void {
+    this.postGameOptions.forEach((option, index) =>
+      option
+        .setText(`${index === this.postGameIndex ? '▶ ' : ''}${option.text.replace(/^▶ /, '')}`)
+        .setColor(index === this.postGameIndex ? '#f6d77a' : '#ffffff')
+        .setBackgroundColor(index === this.postGameIndex ? '#173f57' : '#0d202c'),
+    );
+  }
+
+  private activatePostGameOption(): void {
+    gameAudio.play('confirm');
+    if (this.postGameIndex === 1) {
+      this.repository.clear();
+      this.scene.start('team-select');
+      return;
+    }
+    const scores = this.highScores.list();
+    const lines = scores.length
+      ? scores.slice(0, 10).map((entry, index) =>
+          `${index + 1}. ${getTeam(entry.teamId).displayName.toUpperCase()}  ${entry.score}`,
+        )
+      : ['NO COMPLETED QUESTS RECORDED'];
+    this.highScorePanel = this.add.text(128, 147, `HIGH SCORES\n\n${lines.join('\n')}\n\nA / B: BACK`, {
+      align: 'center', backgroundColor: '#07111c', color: '#f6d77a', fontFamily: 'monospace', fontSize: '7px', lineSpacing: 3,
+      padding: { x: 14, y: 10 },
+    }).setOrigin(0.5).setDepth(600);
   }
 }
 

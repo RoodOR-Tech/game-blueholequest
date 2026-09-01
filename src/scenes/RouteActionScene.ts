@@ -125,6 +125,7 @@ export class RouteActionScene extends Phaser.Scene {
     this.definition.obstacleXs.forEach((x, index) =>
       this.createObstacle(x, index, floor),
     );
+    this.createAdvancedTraversal();
     this.definition.enemyXs.forEach((x) => this.spawnEnemy(x, 198, false));
     this.definition.flyingEnemyXs.forEach((x) =>
       this.spawnEnemy(x, 145, true),
@@ -418,6 +419,59 @@ export class RouteActionScene extends Phaser.Scene {
         repeat: -1,
       });
     }
+  }
+
+  private createAdvancedTraversal(): void {
+    if (!this.player || !this.save) return;
+    const platformColor = {
+      hillsboro_west: 0x6b3d61,
+      hillsboro_east: 0x536a78,
+      milwaukie: 0x3b7880,
+      walla_walla: 0xa77c35,
+      bend: 0x42353b,
+    }[this.locationId];
+    const platformData = this.eventIndex === 1
+      ? [{ x: 185, y: 173, axis: 'y' }, { x: 365, y: 151, axis: 'x' }]
+      : [{ x: 155, y: 158, axis: 'x' }, { x: 385, y: 176, axis: 'y' }];
+    platformData.forEach((data, index) => {
+      const platform = this.add.rectangle(data.x, data.y, 38, 7, platformColor)
+        .setStrokeStyle(2, this.definition.accentColor)
+        .setDepth(4);
+      this.physics.add.existing(platform);
+      const body = platform.body as Phaser.Physics.Arcade.Body;
+      body.setAllowGravity(false).setImmovable(true);
+      this.physics.add.collider(this.player!, platform);
+      this.tweens.add({
+        targets: platform,
+        x: data.axis === 'x' ? data.x + (index ? -42 : 42) : data.x,
+        y: data.axis === 'y' ? data.y - 38 : data.y,
+        duration: 1500 + index * 320,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+      });
+      if (this.locationId === 'milwaukie')
+        this.add.circle(data.x, data.y + 5, 4, 0x9deafa, 0.5).setDepth(3);
+    });
+
+    [112, 268, 432].forEach((x, index) => {
+      const token = this.add.circle(x, 125 + (index % 2) * 25, 5, this.definition.accentColor)
+        .setStrokeStyle(2, 0xffffff, 0.8)
+        .setDepth(8);
+      this.physics.add.existing(token);
+      const body = token.body as Phaser.Physics.Arcade.Body;
+      body.setAllowGravity(false);
+      this.tweens.add({ targets: token, y: token.y - 7, angle: 180, duration: 650, yoyo: true, repeat: -1 });
+      this.physics.add.overlap(this.player!, token, () => {
+        if (!token.active || !this.save) return;
+        token.destroy();
+        this.save = addScore(this.save, 75, new Date().toISOString());
+        this.repository.save(this.save);
+        gameAudio.play('select');
+        this.message?.setText('ROUTE TOKEN COLLECTED • +75 SCORE');
+        this.refreshHud();
+      });
+    });
   }
 
   private spawnEnemy(x: number, y: number, flying: boolean): void {
