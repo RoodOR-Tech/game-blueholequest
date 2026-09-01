@@ -431,8 +431,8 @@ export class RouteActionScene extends Phaser.Scene {
       bend: 0x42353b,
     }[this.locationId];
     const platformData = this.eventIndex === 1
-      ? [{ x: 185, y: 173, axis: 'y' }, { x: 365, y: 151, axis: 'x' }]
-      : [{ x: 155, y: 158, axis: 'x' }, { x: 385, y: 176, axis: 'y' }];
+      ? [{ x: 185, y: 190, axis: 'y' }, { x: 365, y: 174, axis: 'x' }]
+      : [{ x: 155, y: 188, axis: 'x' }, { x: 385, y: 190, axis: 'y' }];
     platformData.forEach((data, index) => {
       const platform = this.add.rectangle(data.x, data.y, 38, 7, platformColor)
         .setStrokeStyle(2, this.definition.accentColor)
@@ -440,11 +440,24 @@ export class RouteActionScene extends Phaser.Scene {
       this.physics.add.existing(platform);
       const body = platform.body as Phaser.Physics.Arcade.Body;
       body.setAllowGravity(false).setImmovable(true);
-      this.physics.add.collider(this.player!, platform);
+      this.physics.add.collider(
+        this.player!,
+        platform,
+        undefined,
+        () => {
+          const playerBody = this.player?.body;
+          const platformBody = platform.body as Phaser.Physics.Arcade.Body;
+          return Boolean(
+            playerBody &&
+            playerBody.velocity.y >= 0 &&
+            playerBody.bottom <= platformBody.top + 11,
+          );
+        },
+      );
       this.tweens.add({
         targets: platform,
         x: data.axis === 'x' ? data.x + (index ? -42 : 42) : data.x,
-        y: data.axis === 'y' ? data.y - 38 : data.y,
+        y: data.axis === 'y' ? data.y - 25 : data.y,
         duration: 1500 + index * 320,
         ease: 'Sine.easeInOut',
         yoyo: true,
