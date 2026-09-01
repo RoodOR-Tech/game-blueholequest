@@ -4,7 +4,10 @@ import {
   DAD_TEXTURE_KEY,
   registerDadAnimations,
 } from '../actors/dadAnimations';
-import { registerFamilyAnimations } from '../actors/familyAnimations';
+import {
+  preloadFamilySprites,
+  registerFamilyAnimations,
+} from '../actors/familyAnimations';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -13,6 +16,7 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     this.load.image(DAD_TEXTURE_KEY, DAD_SPRITE_PATH);
+    preloadFamilySprites(this);
   }
 
   create(): void {
