@@ -110,7 +110,7 @@ export class RouteActionScene extends Phaser.Scene {
       this.spawnEnemy(x, 145, true),
     );
     this.createEnvironmentMechanic();
-    if (!this.save.flags[buddaFlag(this.locationId)]) {
+    {
       const preferredX = { hillsboro_west: 118, hillsboro_east: 202, milwaukie: 282, walla_walla: 366, bend: 444 }[this.locationId];
       const occupied = [
         ...this.definition.obstacleXs,
@@ -127,13 +127,20 @@ export class RouteActionScene extends Phaser.Scene {
         .setScale(BUDDA_SPRITE_SCALE)
         .setDepth(3);
       this.buddaPrompt = this.add
-        .text(x, 176, 'BUDDA • A / B / ENTER: TALK', {
+        .text(
+          x,
+          176,
+          this.save.flags[buddaFlag(this.locationId)]
+            ? 'BUDDA • A / B / ENTER: VISIT'
+            : 'BUDDA • A / B / ENTER: TALK',
+          {
           backgroundColor: '#08111df2',
           color: '#f6d77a',
           fontFamily: 'monospace',
           fontSize: '6px',
           padding: { x: 5, y: 3 },
-        })
+          },
+        )
         .setOrigin(0.5)
         .setDepth(20)
         .setVisible(false);
@@ -207,12 +214,14 @@ export class RouteActionScene extends Phaser.Scene {
     if (!interactPressed) return;
     const before = foundBuddaCount(this.save);
     this.save = discoverBudda(this.save, this.locationId, new Date().toISOString());
-    if (foundBuddaCount(this.save) === before) return;
-    this.repository.save(this.save);
+    const firstMeeting = foundBuddaCount(this.save) > before;
+    if (firstMeeting) this.repository.save(this.save);
     const encounter = BUDDA_ENCOUNTERS[this.locationId];
     const completed = this.save.inventory.includes(BUDDA_ACHIEVEMENT);
     this.message.setText(
-      `BUDDA THE GINGER CAT\n“${encounter.line}”\nREWARD: ${encounter.reward}  •  FOUND ${foundBuddaCount(this.save)}/6${completed ? '\nNINE BUZZED LIVES UNLOCKED!' : ''}`,
+      firstMeeting
+        ? `BUDDA THE GINGER CAT\n“${encounter.line}”\nREWARD: ${encounter.reward}  •  FOUND ${foundBuddaCount(this.save)}/6${completed ? '\nNINE BUZZED LIVES UNLOCKED!' : ''}`
+        : `BUDDA THE GINGER CAT\n“${encounter.line}”\nYOUR OLD FRIEND PURRS AND CHEERS YOU ON.`,
     );
     this.budda.setTint(0xf6d77a);
     this.buddaPrompt?.setVisible(false);
@@ -418,10 +427,27 @@ export class RouteActionScene extends Phaser.Scene {
     this.nextAttackAt = time + 280;
     this.attackingUntil = time + 210;
     if (this.save) this.player.play(playerVisual(this.save.activeTeamId).attack, true);
-    const x = this.player.x + this.facing * 24;
-    const slash = this.add.rectangle(x, this.player.y, 28, 17, 0xffd86b, 0.68);
-    this.tweens.add({ targets: slash, alpha: 0, duration: 100, onComplete: () => slash.destroy() });
-    const bounds = new Phaser.Geom.Rectangle(x - 14, this.player.y - 10, 28, 20);
+    const startX = this.player.x + this.facing * 14;
+    const endX = this.player.x + this.facing * 58;
+    const burst = this.add
+      .rectangle(startX, this.player.y - 2, 12, 6, 0xffe47a, 0.95)
+      .setStrokeStyle(1, 0xffffff)
+      .setDepth(15);
+    this.tweens.add({
+      targets: burst,
+      x: endX,
+      scaleX: 0.35,
+      alpha: 0,
+      duration: 145,
+      ease: 'Quad.easeOut',
+      onComplete: () => burst.destroy(),
+    });
+    const bounds = new Phaser.Geom.Rectangle(
+      Math.min(startX, endX) - 7,
+      this.player.y - 12,
+      Math.abs(endX - startX) + 14,
+      22,
+    );
     const enemy = this.enemies.find(
       (candidate) =>
         candidate.sprite.active &&
