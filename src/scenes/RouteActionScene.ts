@@ -32,6 +32,18 @@ interface ActionEnemy {
   readonly originY: number;
 }
 
+type MagicBlessing = 'full_heal' | 'buckshot' | 'super_jump';
+
+const MAGIC_BLESSINGS: readonly {
+  id: MagicBlessing;
+  title: string;
+  description: string;
+}[] = [
+  { id: 'full_heal', title: 'FULL HEAL', description: 'RESTORE ALL HP ONCE WHEN CRITICAL' },
+  { id: 'buckshot', title: '3-SHOT BUCKSHOT', description: 'FIRE THREE SHORT-RANGE MAGIC BOLTS' },
+  { id: 'super_jump', title: 'SUPER JUMP', description: 'JUMP HIGHER FOR THIS WHOLE MISSION' },
+];
+
 export class RouteActionScene extends Phaser.Scene {
   private locationId: BossLocationId = 'hillsboro_west';
   private eventIndex: 1 | 2 = 1;
@@ -55,6 +67,12 @@ export class RouteActionScene extends Phaser.Scene {
   private gameOver = false;
   private budda?: Phaser.GameObjects.Sprite;
   private buddaPrompt?: Phaser.GameObjects.Text;
+  private choosingMagic = false;
+  private magicChoiceIndex = 0;
+  private magicChoicePanel?: Phaser.GameObjects.Container;
+  private magicChoiceTexts: Phaser.GameObjects.Text[] = [];
+  private blessing?: MagicBlessing;
+  private fullHealUsed = false;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -146,11 +164,16 @@ export class RouteActionScene extends Phaser.Scene {
         .setVisible(false);
     }
     this.createHud();
+    this.openMagicChoice();
   }
 
   update(time: number): void {
     if (!this.controls || !this.player || !this.save) return;
     this.controls.update(this.input.gamepad?.getPad(0));
+    if (this.choosingMagic) {
+      this.updateMagicChoice();
+      return;
+    }
     if (this.sequenceOver) {
       this.player.setVelocityX(0);
       const continuePressed =
@@ -179,7 +202,7 @@ export class RouteActionScene extends Phaser.Scene {
       time - this.lastGroundedAt <= 100 &&
       this.player.body.velocity.y >= 0
     ) {
-      this.player.setVelocityY(-168);
+      this.player.setVelocityY(this.blessing === 'super_jump' ? -220 : -168);
       this.jumpBufferedUntil = 0;
     }
     if (
@@ -245,6 +268,85 @@ export class RouteActionScene extends Phaser.Scene {
     this.gameOver = false;
     this.budda = undefined;
     this.buddaPrompt = undefined;
+    this.choosingMagic = false;
+    this.magicChoiceIndex = 0;
+    this.magicChoicePanel = undefined;
+    this.magicChoiceTexts = [];
+    this.blessing = undefined;
+    this.fullHealUsed = false;
+  }
+
+  private openMagicChoice(): void {
+    if (!this.save || !this.message) return;
+    if (this.save.resources.magic <= 0) {
+      this.message.setText('NO MAGIC REMAINS • STANDARD ABILITIES ACTIVE');
+      return;
+    }
+    this.choosingMagic = true;
+    const shade = this.add.rectangle(128, 126, 242, 172, 0x07111c, 0.97).setStrokeStyle(2, 0x75d9ff);
+    const title = this.add.text(128, 53, 'CHOOSE MAGIC • COST 1 MP', {
+      color: '#f6d77a', fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    const hint = this.add.text(128, 194, 'UP / DOWN • A / B / ENTER: CHOOSE', {
+      color: '#bfeaff', fontFamily: 'monospace', fontSize: '6px',
+    }).setOrigin(0.5);
+    this.magicChoiceTexts = MAGIC_BLESSINGS.map((_, index) =>
+      this.add.text(128, 84 + index * 34, '', {
+        align: 'center', fontFamily: 'monospace', fontSize: '7px', lineSpacing: 2,
+        padding: { x: 7, y: 4 },
+      }).setOrigin(0.5),
+    );
+    this.magicChoicePanel = this.add.container(0, 0, [shade, title, hint, ...this.magicChoiceTexts]).setDepth(500);
+    this.refreshMagicChoice();
+  }
+
+  private updateMagicChoice(): void {
+    if (!this.controls) return;
+    if (this.controls.actions.get('up').pressed) {
+      this.magicChoiceIndex = (this.magicChoiceIndex + MAGIC_BLESSINGS.length - 1) % MAGIC_BLESSINGS.length;
+      gameAudio.play('select');
+      this.refreshMagicChoice();
+    }
+    if (this.controls.actions.get('down').pressed) {
+      this.magicChoiceIndex = (this.magicChoiceIndex + 1) % MAGIC_BLESSINGS.length;
+      gameAudio.play('select');
+      this.refreshMagicChoice();
+    }
+    const choose =
+      this.controls.actions.get('confirm').pressed ||
+      this.controls.actions.get('jump').pressed ||
+      this.controls.actions.get('attack').pressed;
+    if (!choose) return;
+    this.chooseMagicBlessing();
+  }
+
+  private refreshMagicChoice(): void {
+    this.magicChoiceTexts.forEach((text, index) => {
+      const blessing = MAGIC_BLESSINGS[index]!;
+      const selected = index === this.magicChoiceIndex;
+      text
+        .setText(`${selected ? '▶ ' : ''}${blessing.title}\n${blessing.description}`)
+        .setColor(selected ? '#ffe58a' : '#d6e3e8')
+        .setBackgroundColor(selected ? '#17415b' : '#0b202e');
+    });
+  }
+
+  private chooseMagicBlessing(): void {
+    if (!this.save || !this.message) return;
+    const choice = MAGIC_BLESSINGS[this.magicChoiceIndex]!;
+    this.blessing = choice.id;
+    this.save = {
+      ...this.save,
+      resources: { ...this.save.resources, magic: Math.max(0, this.save.resources.magic - 1) },
+      savedAt: new Date().toISOString(),
+    };
+    this.repository.save(this.save);
+    this.choosingMagic = false;
+    this.magicChoicePanel?.destroy(true);
+    this.magicChoicePanel = undefined;
+    gameAudio.play('confirm');
+    this.message.setText(`${choice.title} ACTIVE • ${choice.description}`);
+    this.refreshHud();
   }
 
   private createObstacle(
@@ -429,40 +531,44 @@ export class RouteActionScene extends Phaser.Scene {
     if (this.save) this.player.play(playerVisual(this.save.activeTeamId).attack, true);
     const startX = this.player.x + this.facing * 14;
     const endX = this.player.x + this.facing * 58;
-    const burst = this.add
-      .rectangle(startX, this.player.y - 2, 12, 6, 0xffe47a, 0.95)
-      .setStrokeStyle(1, 0xffffff)
-      .setDepth(15);
-    this.tweens.add({
-      targets: burst,
-      x: endX,
-      scaleX: 0.35,
-      alpha: 0,
-      duration: 145,
-      ease: 'Quad.easeOut',
-      onComplete: () => burst.destroy(),
+    const lanes = this.blessing === 'buckshot' ? [-12, 0, 12] : [0];
+    const hitEnemies = new Set<ActionEnemy>();
+    lanes.forEach((offsetY) => {
+      const burst = this.add
+        .rectangle(startX, this.player!.y - 2 + offsetY, 12, 6, 0xffe47a, 0.95)
+        .setStrokeStyle(1, 0xffffff)
+        .setDepth(15)
+        .setAngle(this.facing * offsetY * 0.7);
+      this.tweens.add({
+        targets: burst,
+        x: endX,
+        y: this.player!.y - 2 + offsetY * 1.7,
+        scaleX: 0.35,
+        alpha: 0,
+        duration: 145,
+        ease: 'Quad.easeOut',
+        onComplete: () => burst.destroy(),
+      });
+      const bounds = new Phaser.Geom.Rectangle(
+        Math.min(startX, endX) - 7,
+        this.player!.y - 11 + offsetY,
+        Math.abs(endX - startX) + 14,
+        18,
+      );
+      const enemy = this.enemies.find(
+        (candidate) => candidate.sprite.active && !hitEnemies.has(candidate) &&
+          Phaser.Geom.Intersects.RectangleToRectangle(bounds, candidate.sprite.getBounds()),
+      );
+      if (enemy) hitEnemies.add(enemy);
     });
-    const bounds = new Phaser.Geom.Rectangle(
-      Math.min(startX, endX) - 7,
-      this.player.y - 12,
-      Math.abs(endX - startX) + 14,
-      22,
-    );
-    const enemy = this.enemies.find(
-      (candidate) =>
-        candidate.sprite.active &&
-        Phaser.Geom.Intersects.RectangleToRectangle(
-          bounds,
-          candidate.sprite.getBounds(),
-        ),
-    );
-    if (!enemy) return;
-    const result = applyDamage(enemy.health, 1);
-    enemy.health = result.health;
-    if (result.defeated) {
-      enemy.sprite.destroy();
-      this.message?.setText('CREATURE CLEARED • KEEP MOVING!');
-    }
+    hitEnemies.forEach((enemy) => {
+      const result = applyDamage(enemy.health, 1);
+      enemy.health = result.health;
+      if (result.defeated) {
+        enemy.sprite.destroy();
+        this.message?.setText('CREATURE CLEARED • KEEP MOVING!');
+      }
+    });
   }
 
   private damagePlayer(time: number, direction: number): void {
@@ -481,6 +587,25 @@ export class RouteActionScene extends Phaser.Scene {
     this.repository.save(this.save);
     this.player.setVelocity(direction * 92, -90).setTintFill(0xff6655);
     this.time.delayedCall(180, () => this.player?.clearTint());
+    if (
+      this.blessing === 'full_heal' &&
+      !this.fullHealUsed &&
+      result.health.current <= Math.ceil(result.health.maximum * 0.35)
+    ) {
+      this.fullHealUsed = true;
+      this.save = {
+        ...this.save,
+        resources: { ...this.save.resources, life: this.save.resources.maxLife },
+        savedAt: new Date().toISOString(),
+      };
+      this.repository.save(this.save);
+      this.player.clearTint();
+      this.cameras.main.flash(260, 120, 235, 190, false);
+      gameAudio.play('artifact');
+      this.message?.setText('FULL HEAL TRIGGERED • HEALTH RESTORED!');
+      this.refreshHud();
+      return;
+    }
     if (!result.defeated) {
       this.message?.setText(`HIT • ${result.health.current} HP LEFT`);
       this.refreshHud();
