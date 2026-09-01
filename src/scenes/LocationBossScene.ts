@@ -18,6 +18,7 @@ import {
 } from '../game/progression/lives';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
+import { addScore, SCORE_VALUES } from '../game/progression/scoring';
 import { TouchControls } from '../ui/TouchControls';
 
 const MOVE_SPEED = 68;
@@ -471,6 +472,12 @@ export class LocationBossScene extends Phaser.Scene {
     this.save = awardLocationArtifact(
       this.save,
       this.location,
+      new Date().toISOString(),
+    );
+    const bossIndex = BOSS_LOCATIONS.findIndex((location) => location.id === this.location.id);
+    this.save = addScore(
+      this.save,
+      SCORE_VALUES.bossBase + Math.max(0, bossIndex) * SCORE_VALUES.bossStep,
       new Date().toISOString(),
     );
     this.repository.save(this.save);

@@ -4,6 +4,8 @@ import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { sceneForCheckpoint } from '../game/progression/checkpoints';
 import { sanitizeGamepads } from '../game/input/PhaserInput';
+import { HighScoreRepository } from '../game/saves/highScores';
+import { getTeam } from '../content/teams';
 
 const COLORS = {
   ocean: 0x176eb0,
@@ -24,6 +26,7 @@ export class TitleScene extends Phaser.Scene {
   private readonly selectNext = () => this.moveSelection(1);
   private readonly activate = () => this.activateSelection();
   private readonly repository = new SaveRepository(window.localStorage);
+  private readonly highScores = new HighScoreRepository(window.localStorage);
 
   constructor() {
     super('title');
@@ -33,6 +36,7 @@ export class TitleScene extends Phaser.Scene {
     gameAudio.bind(this, 'title');
     this.save = this.repository.load() ?? undefined;
     this.drawBackdrop();
+    this.drawHighScores();
     this.createMenu();
     this.input.keyboard?.on('keydown-UP', this.selectPrevious);
     this.input.keyboard?.on('keydown-W', this.selectPrevious);
@@ -134,11 +138,22 @@ export class TitleScene extends Phaser.Scene {
     if (!this.status || this.confirmingNewGame) return;
     this.status.setText(
       this.save && this.selectedIndex === 0
-        ? `ARTIFACTS ${this.save.relics.length}/5 • LIVES ${this.save.resources.lives}/${this.save.resources.maxLives} • XP ${this.save.stats.experience}`
+        ? `SCORE ${this.save.stats.score} • ARTIFACTS ${this.save.relics.length}/5 • LIVES ${this.save.resources.lives}/${this.save.resources.maxLives}`
         : this.save
           ? 'START OVER WITH A NEW FAMILY TEAM'
           : 'BEGIN A NEW ROOD HOLIDAY ADVENTURE',
     );
+  }
+
+  private drawHighScores(): void {
+    const scores = this.highScores.list().slice(0, 3);
+    if (scores.length === 0) return;
+    const lines = scores.map(
+      (entry, index) => `${index + 1}. ${getTeam(entry.teamId).displayName.toUpperCase()}  ${entry.score}`,
+    );
+    this.add.text(249, 84, `HIGH SCORES\n${lines.join('\n')}`, {
+      align: 'right', backgroundColor: '#08111ddd', color: '#f6d77a', fontFamily: 'monospace', fontSize: '5px', lineSpacing: 2, padding: { x: 4, y: 3 },
+    }).setOrigin(1, 0);
   }
 
   private drawBackdrop(): void {

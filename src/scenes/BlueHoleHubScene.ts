@@ -274,7 +274,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
     if (!this.save || !this.hud) return;
     const team = getTeam(this.save.activeTeamId);
     this.hud.setText(
-      `${team.displayName.toUpperCase()}  HP ${this.save.resources.life}/${this.save.resources.maxLife}  LIVES ${this.save.resources.lives}/${this.save.resources.maxLives}  MAGIC ${this.save.resources.magic}/${this.save.resources.maxMagic}`,
+      `${team.displayName.toUpperCase()}  SCORE ${this.save.stats.score}\nHP ${this.save.resources.life}/${this.save.resources.maxLife}  LIVES ${this.save.resources.lives}/${this.save.resources.maxLives}  MAGIC ${this.save.resources.magic}/${this.save.resources.maxMagic}`,
     );
   }
 

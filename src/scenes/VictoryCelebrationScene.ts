@@ -10,6 +10,7 @@ import { playerVisual } from '../actors/familyAnimations';
 import type { TeamId } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { SaveRepository } from '../game/saves/repository';
+import { HighScoreRepository } from '../game/saves/highScores';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
 
@@ -27,6 +28,7 @@ export class VictoryCelebrationScene extends Phaser.Scene {
   private save?: SaveData;
   private leaving = false;
   private readonly repository = new SaveRepository(window.localStorage);
+  private readonly highScores = new HighScoreRepository(window.localStorage);
 
   constructor() {
     super('victory-celebration');
@@ -73,6 +75,9 @@ export class VictoryCelebrationScene extends Phaser.Scene {
         padding: { x: 7, y: 4 },
       })
       .setOrigin(0.5);
+    this.add.text(128, 72, `FINAL SCORE • ${this.save.stats.score}`, {
+      backgroundColor: '#08111dcc', color: '#f6d77a', fontFamily: 'monospace', fontSize: '8px', padding: { x: 6, y: 3 },
+    }).setOrigin(0.5);
     const button = this.add
       .text(128, 221, 'A / ENTER • RETURN TO THE BLUE HOLE', {
         backgroundColor: '#173f57ee',
@@ -88,12 +93,20 @@ export class VictoryCelebrationScene extends Phaser.Scene {
     this.tweens.add({ targets: button, alpha: 0.62, duration: 700, yoyo: true, repeat: -1 });
     this.controls = new PhaserInput(this);
     new TouchControls(this, this.controls);
+    const shouldRecord = !this.save.flags.high_score_recorded;
     this.save = {
       ...this.save,
-      flags: { ...this.save.flags, quest_victory_celebrated: true },
+      flags: { ...this.save.flags, quest_victory_celebrated: true, high_score_recorded: true },
       savedAt: new Date().toISOString(),
     };
     this.repository.save(this.save);
+    if (shouldRecord)
+      this.highScores.record({
+        teamId: this.save.activeTeamId,
+        score: this.save.stats.score,
+        artifacts: this.save.relics.length,
+        completedAt: new Date().toISOString(),
+      });
     this.time.addEvent({ delay: 430, loop: true, callback: () => this.launchFirework() });
     this.cameras.main.fadeIn(700, 0, 0, 0);
   }

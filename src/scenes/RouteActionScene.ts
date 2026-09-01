@@ -22,6 +22,7 @@ import {
   resolveKnockout,
 } from '../game/progression/lives';
 import { SaveRepository } from '../game/saves/repository';
+import { addScore, SCORE_VALUES } from '../game/progression/scoring';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
 
@@ -238,7 +239,10 @@ export class RouteActionScene extends Phaser.Scene {
     const before = foundBuddaCount(this.save);
     this.save = discoverBudda(this.save, this.locationId, new Date().toISOString());
     const firstMeeting = foundBuddaCount(this.save) > before;
-    if (firstMeeting) this.repository.save(this.save);
+    if (firstMeeting) {
+      this.save = addScore(this.save, SCORE_VALUES.budda, new Date().toISOString());
+      this.repository.save(this.save);
+    }
     const encounter = BUDDA_ENCOUNTERS[this.locationId];
     const completed = this.save.inventory.includes(BUDDA_ACHIEVEMENT);
     this.message.setText(
@@ -566,6 +570,11 @@ export class RouteActionScene extends Phaser.Scene {
       enemy.health = result.health;
       if (result.defeated) {
         enemy.sprite.destroy();
+        if (this.save) {
+          this.save = addScore(this.save, SCORE_VALUES.enemy, new Date().toISOString());
+          this.repository.save(this.save);
+          this.refreshHud();
+        }
         this.message?.setText('CREATURE CLEARED • KEEP MOVING!');
       }
     });
@@ -584,6 +593,7 @@ export class RouteActionScene extends Phaser.Scene {
       resources: { ...this.save.resources, life: result.health.current },
       savedAt: new Date().toISOString(),
     };
+    this.save = addScore(this.save, SCORE_VALUES.actionSequence, new Date().toISOString());
     this.repository.save(this.save);
     this.player.setVelocity(direction * 92, -90).setTintFill(0xff6655);
     this.time.delayedCall(180, () => this.player?.clearTint());
@@ -705,7 +715,7 @@ export class RouteActionScene extends Phaser.Scene {
     if (!this.save) return;
     this.hud
       ?.setText(
-        `${this.definition.title} • HP ${this.save.resources.life}/${this.save.resources.maxLife} • LIVES ${this.save.resources.lives}/${this.save.resources.maxLives}`,
+        `${this.definition.title} • SCORE ${this.save.stats.score}\nHP ${this.save.resources.life}/${this.save.resources.maxLife} • LIVES ${this.save.resources.lives}/${this.save.resources.maxLives}`,
       )
       .setScrollFactor(0);
   }

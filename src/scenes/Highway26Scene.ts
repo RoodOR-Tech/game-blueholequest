@@ -12,6 +12,7 @@ import { recoverFromGameOver } from '../game/progression/lives';
 import { locationArrivalFlag } from '../game/progression/locationArrivals';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
+import { addScore, SCORE_VALUES } from '../game/progression/scoring';
 import { TouchControls } from '../ui/TouchControls';
 
 const NODE_X = [28, 78, 128, 178, 228] as const;
@@ -288,6 +289,11 @@ export class Highway26Scene extends Phaser.Scene {
       },
       savedAt: new Date().toISOString(),
     };
+    this.save = addScore(
+      this.save,
+      event.kind === 'calamity' ? SCORE_VALUES.calamity : 150,
+      new Date().toISOString(),
+    );
     this.repository.save(this.save);
     this.eventPanel?.destroy(true);
     this.eventPanel = undefined;

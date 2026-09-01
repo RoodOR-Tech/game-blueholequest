@@ -11,6 +11,7 @@ export interface SaveDataV1 {
     readonly magicLevel: number;
     readonly lifeLevel: number;
     readonly experience: number;
+    readonly score: number;
   };
   readonly resources: {
     readonly life: number;
@@ -41,6 +42,7 @@ export function createNewSave(activeTeamId: TeamId): SaveDataV1 {
       magicLevel: team.startingStats.magic,
       lifeLevel: team.startingStats.life,
       experience: 0,
+      score: 0,
     },
     resources: {
       life: 4 + team.startingStats.life,
@@ -91,6 +93,10 @@ export function normalizeSaveData(value: unknown): SaveData | null {
     ...value,
     checkpointId,
     relics,
+    stats: {
+      ...value.stats,
+      score: typeof value.stats.score === 'number' ? value.stats.score : 0,
+    },
     resources: {
       ...value.resources,
       lives: legacyResources.lives ?? 3,
@@ -115,3 +121,4 @@ export function isSaveData(value: unknown): value is SaveData {
     Array.isArray(candidate.inventory)
   );
 }
+
