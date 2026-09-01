@@ -38,6 +38,7 @@ export class Highway26Scene extends Phaser.Scene {
   private message?: Phaser.GameObjects.Text;
   private departButton?: Phaser.GameObjects.Text;
   private eventPanel?: Phaser.GameObjects.Container;
+  private outcomePanel?: Phaser.GameObjects.Container;
   private activeEvent?: RouteEvent;
   private choiceIndex = 0;
   private choiceTexts: Phaser.GameObjects.Text[] = [];
@@ -116,6 +117,10 @@ export class Highway26Scene extends Phaser.Scene {
   update(): void {
     if (!this.controls || !this.save) return;
     this.controls.update(this.input.gamepad?.getPad(0));
+    if (this.outcomePanel) {
+      this.updateOutcome();
+      return;
+    }
     if (this.gameOver) {
       if (this.controls.actions.get('confirm').pressed) {
         this.save = recoverFromGameOver(this.save, new Date().toISOString());
@@ -226,8 +231,8 @@ export class Highway26Scene extends Phaser.Scene {
       this.add
         .text(
           128,
-          120 + index * 24,
-          `${choice.label} • ${
+          118 + index * 35,
+          `${choice.label}\n${
             event.kind === 'calamity'
               ? index === 0
                 ? `-2 HP / LIFE RISK • +${SCORE_VALUES.calamityRisk} SCORE`
@@ -235,16 +240,18 @@ export class Highway26Scene extends Phaser.Scene {
               : `+${index === 0 ? 150 : 100} SCORE`
           }`,
           {
-          color: '#ffffff',
-          fontFamily: 'monospace',
-          fontSize: '7px',
+            align: 'center',
+            color: '#ffffff',
+            fontFamily: 'monospace',
+            fontSize: '6px',
+            lineSpacing: 2,
           padding: { x: 5, y: 4 },
           },
         )
         .setOrigin(0.5),
     );
     const hint = this.add
-      .text(128, 178, 'UP / DOWN: CHOOSE • A / ENTER: COMMIT', {
+      .text(128, 190, 'UP / DOWN: CHOOSE • A / ENTER: COMMIT', {
         color: '#91b4c8',
         fontFamily: 'monospace',
         fontSize: '5px',
@@ -275,6 +282,12 @@ export class Highway26Scene extends Phaser.Scene {
     const event = this.activeEvent;
     const choice = event?.choices[this.choiceIndex];
     if (!route || !event || !choice || !this.save) return;
+    const before = {
+      life: this.save.resources.life,
+      magic: this.save.resources.magic,
+      lives: this.save.resources.lives,
+      score: this.save.stats.score,
+    };
     const outcome = resolveRouteChoice(
       {
         life: this.save.resources.life,
@@ -316,23 +329,89 @@ export class Highway26Scene extends Phaser.Scene {
     this.eventPanel = undefined;
     this.activeEvent = undefined;
     this.choiceTexts = [];
-    if (outcome.lives === 0) {
-      this.gameOver = true;
-      this.message?.setText('FINAL LIFE LOST • A / ENTER: RECOVER HOME');
-    } else
-      this.message?.setText(
-        `${choice.summary.toUpperCase()}${outcome.lostLife ? ' • LIFE LOST!' : ''}`,
-      );
+    this.gameOver = outcome.lives === 0;
+    this.showOutcomePanel(event.title, choice.label, choice.summary, before, {
+      life: outcome.life,
+      magic: outcome.magic,
+      lives: outcome.lives,
+      scoreGained: this.save.stats.score - before.score,
+      lostLife: outcome.lostLife,
+    });
+  }
+
+  private showOutcomePanel(
+    eventTitle: string,
+    choiceLabel: string,
+    summary: string,
+    before: { life: number; magic: number; lives: number; score: number },
+    after: { life: number; magic: number; lives: number; scoreGained: number; lostLife: boolean },
+  ): void {
+    const shade = this.add.rectangle(128, 125, 240, 176, 0x07111c, 0.98)
+      .setStrokeStyle(3, after.lostLife ? 0xff6655 : 0xf6d77a);
+    const heading = this.add.text(128, 48, 'CALAMITY CONSEQUENCES', {
+      color: after.lostLife ? '#ff8d79' : '#f6d77a', fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    const title = this.add.text(128, 69, `${eventTitle}\nYOU CHOSE: ${choiceLabel}`, {
+      align: 'center', color: '#ffffff', fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold', lineSpacing: 2,
+    }).setOrigin(0.5);
+    const consequences = this.add.text(128, 122, [
+      `HEALTH     ${before.life} → ${after.life}`,
+      `MAGIC      ${before.magic} → ${after.magic}`,
+      `LIVES      ${before.lives} → ${after.lives}`,
+      `SCORE      +${after.scoreGained}`,
+      after.lostLife ? '! A LIFE WAS LOST !' : 'NO LIFE LOST',
+    ].join('\n'), {
+      align: 'left', backgroundColor: '#10283a', color: after.lostLife ? '#ffb09f' : '#c9f2d2',
+      fontFamily: 'monospace', fontSize: '8px', lineSpacing: 3, padding: { x: 10, y: 7 },
+    }).setOrigin(0.5);
+    const result = this.add.text(128, 174, summary.toUpperCase(), {
+      align: 'center', color: '#d7e6eb', fontFamily: 'monospace', fontSize: '6px', wordWrap: { width: 210 },
+    }).setOrigin(0.5);
+    const continueText = this.add.text(
+      128,
+      200,
+      after.lives === 0 ? 'A / ENTER • RECOVER HOME' : 'A / ENTER • CONTINUE',
+      {
+        backgroundColor: '#17415b', color: '#f6d77a', fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold', padding: { x: 8, y: 5 },
+      },
+    ).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    continueText.on('pointerdown', () => this.dismissOutcome());
+    this.outcomePanel = this.add.container(0, 0, [shade, heading, title, consequences, result, continueText]).setDepth(250);
+  }
+
+  private updateOutcome(): void {
+    if (!this.controls) return;
+    if (
+      this.controls.actions.get('confirm').pressed ||
+      this.controls.actions.get('jump').pressed
+    ) this.dismissOutcome();
+  }
+
+  private dismissOutcome(): void {
+    this.outcomePanel?.destroy(true);
+    this.outcomePanel = undefined;
+    this.message?.setText(
+      this.gameOver
+        ? 'FINAL LIFE LOST • A / ENTER: RECOVER HOME'
+        : 'CONSEQUENCES RECORDED • CONTINUE WHEN READY',
+    );
   }
 
   private refreshChoices(): void {
     this.choiceTexts.forEach((text, index) => {
       const selected = index === this.choiceIndex;
+      const event = this.activeEvent;
+      const choice = event?.choices[index];
+      const stakes = event?.kind === 'calamity'
+        ? index === 0
+          ? `-2 HP / LIFE RISK • +${SCORE_VALUES.calamityRisk} SCORE`
+          : `-1 MAGIC • +${SCORE_VALUES.calamityCareful} SCORE`
+        : `+${index === 0 ? 150 : 100} SCORE`;
       text
         .setColor(selected ? '#f6d77a' : '#ffffff')
         .setBackgroundColor(selected ? '#27485d' : '')
         .setText(
-          `${selected ? '▶ ' : ''}${this.activeEvent?.choices[index]?.label ?? ''}`,
+          `${selected ? '▶ ' : ''}${choice?.label ?? ''}\n${stakes}`,
         );
     });
   }
