@@ -8,6 +8,7 @@ import {
   type RouteEvent,
 } from '../game/progression/locationRoutes';
 import { recoverFromGameOver } from '../game/progression/lives';
+import { locationArrivalFlag } from '../game/progression/locationArrivals';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
@@ -90,6 +91,16 @@ export class Highway26Scene extends Phaser.Scene {
       (firstIncomplete === -1 ? LOCATION_ROUTES.length - 1 : firstIncomplete);
     this.nodeIndex = this.requestedNodeIndex ?? 0;
     this.traveling = this.requestedTraveling;
+    const requestedRoute = LOCATION_ROUTES[this.routeIndex];
+    if (
+      this.traveling &&
+      this.nodeIndex === 0 &&
+      requestedRoute &&
+      !this.save.flags[locationArrivalFlag(requestedRoute.locationId)]
+    ) {
+      this.scene.start('location-arrival', { routeIndex: this.routeIndex });
+      return;
+    }
     if (this.traveling) {
       this.drawJourney();
       this.marker?.setPosition(
@@ -450,7 +461,12 @@ export class Highway26Scene extends Phaser.Scene {
   }
 
   private beginJourney(): void {
-    if (!LOCATION_ROUTES[this.routeIndex]) return;
+    const route = LOCATION_ROUTES[this.routeIndex];
+    if (!route || !this.save) return;
+    if (!this.save.flags[locationArrivalFlag(route.locationId)]) {
+      this.scene.start('location-arrival', { routeIndex: this.routeIndex });
+      return;
+    }
     this.traveling = true;
     this.nodeIndex = 0;
     this.drawJourney();
