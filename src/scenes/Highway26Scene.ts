@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { gameAudio } from '../audio/GameAudio';
 import { PhaserInput } from '../game/input/PhaserInput';
-import { BOSS_LOCATIONS } from '../game/progression/bossLocations';
+import { BOSS_LOCATIONS, isLocationUnlocked } from '../game/progression/bossLocations';
 import {
   LOCATION_ROUTES,
   resolveRouteChoice,
@@ -133,11 +133,34 @@ export class Highway26Scene extends Phaser.Scene {
 
   private updateMenu(): void {
     if (!this.controls) return;
+    const previous =
+      this.controls.actions.get('left').pressed ||
+      this.controls.actions.get('up').pressed;
+    const next =
+      this.controls.actions.get('right').pressed ||
+      this.controls.actions.get('down').pressed;
+    if (previous) this.moveRouteSelection(-1);
+    if (next) this.moveRouteSelection(1);
     if (this.controls.actions.get('confirm').pressed) {
       this.beginJourney();
     }
     if (this.controls.actions.get('cancel').pressed)
       this.scene.start('blue-hole-hub');
+  }
+
+  private moveRouteSelection(direction: -1 | 1): void {
+    if (!this.save) return;
+    for (let step = 1; step <= LOCATION_ROUTES.length; step += 1) {
+      const candidate =
+        (this.routeIndex + direction * step + LOCATION_ROUTES.length) %
+        LOCATION_ROUTES.length;
+      if (isLocationUnlocked(candidate, this.save.relics)) {
+        this.routeIndex = candidate;
+        gameAudio.play('select');
+        this.drawRouteMenu();
+        return;
+      }
+    }
   }
 
   private updateRoute(): void {
@@ -389,14 +412,13 @@ export class Highway26Scene extends Phaser.Scene {
           BOSS_LOCATIONS[index - 1] &&
             this.save?.relics.includes(BOSS_LOCATIONS[index - 1]!.artifactId),
         );
-      const current = index === this.routeIndex;
+      const current = index === this.routeIndex + 1;
       g.fillStyle(completed ? 0xf6d77a : 0x17374c).fillCircle(
         point.x,
         point.y,
         current ? 7 : 5,
       );
-      this.labels.push(
-        this.add
+      const label = this.add
           .text(point.labelX, point.labelY, point.label, {
             align: 'center',
             backgroundColor: '#08111dcc',
@@ -405,8 +427,16 @@ export class Highway26Scene extends Phaser.Scene {
             fontSize: '4px',
             padding: { x: 2, y: 1 },
           })
-          .setOrigin(0.5),
-      );
+          .setOrigin(0.5);
+      if (index > 0 && isLocationUnlocked(index - 1, this.save?.relics ?? []))
+        label
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            this.routeIndex = index - 1;
+            gameAudio.play('select');
+            this.drawRouteMenu();
+          });
+      this.labels.push(label);
     });
     this.labels.push(
       this.add.text(17, 181, 'PACIFIC', {
@@ -430,13 +460,13 @@ export class Highway26Scene extends Phaser.Scene {
     this.heading?.setText('THE CONNECTED QUEST MAP');
     this.message?.setText(
       route
-        ? `${route.origin} → ${route.label.replace(' ROUTE', '')} • A: DEPART • B: HOME`
+        ? `${route.origin} → ${route.label.replace(' ROUTE', '')}\nARROWS: CHOOSE • A: DEPART • B: HOME`
         : 'ALL DESTINATIONS COMPLETE • B / ESC: HOME',
     );
     this.marker = this.add
       .circle(
-        WORLD_POINTS[this.routeIndex]?.x ?? 24,
-        WORLD_POINTS[this.routeIndex]?.y ?? 178,
+        WORLD_POINTS[this.routeIndex + 1]?.x ?? 24,
+        WORLD_POINTS[this.routeIndex + 1]?.y ?? 178,
         3,
         0xffffff,
       )
@@ -467,6 +497,10 @@ export class Highway26Scene extends Phaser.Scene {
     gameAudio.play('confirm');
     const route = LOCATION_ROUTES[this.routeIndex];
     if (!route || !this.save) return;
+    if (!isLocationUnlocked(this.routeIndex, this.save.relics)) {
+      this.message?.setText('THAT ROUTE IS STILL LOCKED • COMPLETE THE PREVIOUS LOCATION');
+      return;
+    }
     if (!this.save.flags[locationArrivalFlag(route.locationId)]) {
       this.scene.start('location-arrival', { routeIndex: this.routeIndex });
       return;
