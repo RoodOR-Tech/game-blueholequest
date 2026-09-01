@@ -249,10 +249,15 @@ export class TitleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.add
-      .text(128, 68, 'A ROOD FAMILY HOLIDAY ADVENTURE', {
-        color: '#d8edf5',
+      .text(128, 66, 'A ROOD FAMILY\nHOLIDAY ADVENTURE', {
+        align: 'center',
+        backgroundColor: '#173f57cc',
+        color: '#ffffff',
         fontFamily: 'monospace',
-        fontSize: '5px',
+        fontSize: '8px',
+        fontStyle: 'bold',
+        lineSpacing: 1,
+        padding: { x: 7, y: 3 },
       })
       .setOrigin(0.5);
   }

@@ -256,7 +256,7 @@ export function configurePlayerBody(
   sprite: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody,
   teamId: TeamId,
 ): void {
-  if (teamId === 'dad_paula') sprite.body.setSize(210, 500).setOffset(30, 150);
+  if (teamId === 'dad_paula') sprite.body.setSize(210, 420).setOffset(30, 180);
   else
     sprite.body
       .setSize(teamId === 'jason_hilary' ? 190 : 165, 420)

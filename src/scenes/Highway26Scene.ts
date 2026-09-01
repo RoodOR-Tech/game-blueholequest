@@ -224,12 +224,23 @@ export class Highway26Scene extends Phaser.Scene {
       .setOrigin(0.5);
     this.choiceTexts = event.choices.map((choice, index) =>
       this.add
-        .text(128, 120 + index * 24, choice.label, {
+        .text(
+          128,
+          120 + index * 24,
+          `${choice.label} • ${
+            event.kind === 'calamity'
+              ? index === 0
+                ? `-2 HP / LIFE RISK • +${SCORE_VALUES.calamityRisk} SCORE`
+                : `-1 MAGIC • +${SCORE_VALUES.calamityCareful} SCORE`
+              : `+${index === 0 ? 150 : 100} SCORE`
+          }`,
+          {
           color: '#ffffff',
           fontFamily: 'monospace',
           fontSize: '7px',
           padding: { x: 5, y: 4 },
-        })
+          },
+        )
         .setOrigin(0.5),
     );
     const hint = this.add
@@ -291,7 +302,13 @@ export class Highway26Scene extends Phaser.Scene {
     };
     this.save = addScore(
       this.save,
-      event.kind === 'calamity' ? SCORE_VALUES.calamity : 150,
+      event.kind === 'calamity'
+        ? this.choiceIndex === 0
+          ? SCORE_VALUES.calamityRisk
+          : SCORE_VALUES.calamityCareful
+        : this.choiceIndex === 0
+          ? 150
+          : 100,
       new Date().toISOString(),
     );
     this.repository.save(this.save);

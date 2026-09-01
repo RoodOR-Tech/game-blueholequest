@@ -11,6 +11,7 @@ import { getTeam } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { CHECKPOINTS, saveAtCheckpoint } from '../game/progression/checkpoints';
 import {
+  BOSS_LOCATIONS,
   celebrateHomecoming,
   pendingHomecomingArtifact,
 } from '../game/progression/bossLocations';
@@ -225,11 +226,18 @@ export class BlueHoleHubScene extends Phaser.Scene {
   private interact(id: HubFixture['id']): void {
     if (!this.save || !this.message) return;
     if (id === 'exit') {
-      this.scene.start(
-        recoveredRelicCount(this.save.relics) === RELIC_IDS.length
-          ? 'victory-celebration'
-          : 'highway-26',
+      if (recoveredRelicCount(this.save.relics) === RELIC_IDS.length) {
+        this.scene.start('victory-celebration');
+        return;
+      }
+      const nextRouteIndex = BOSS_LOCATIONS.findIndex(
+        (location) => !this.save?.relics.includes(location.artifactId),
       );
+      this.scene.start('highway-26', {
+        routeIndex: Math.max(0, nextRouteIndex),
+        nodeIndex: 0,
+        traveling: true,
+      });
       return;
     }
     if (id === 'fridge') {
