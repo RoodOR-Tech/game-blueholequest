@@ -97,6 +97,7 @@ export class RouteActionScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, 512, 240);
     this.cameras.main.setBounds(0, 0, 512, 240);
     this.drawWorld();
+    this.createWeather();
     this.createTextures();
     ensureBuddaTexture(this);
     this.controls = new PhaserInput(this);
@@ -363,6 +364,20 @@ export class RouteActionScene extends Phaser.Scene {
     const obstacle = this.add
       .rectangle(x, 218 - height / 2, width, height, this.definition.accentColor)
       .setStrokeStyle(2, 0x241c19);
+    if (this.locationId === 'hillsboro_west') {
+      this.add.circle(x - 5, 218 - height, 7, 0x4c2548).setStrokeStyle(2, 0xb45b9c);
+      this.add.line(0, 0, x - 13, 218, x + 12, 199 - height / 2, 0x6f345f, 1).setOrigin(0, 0);
+    } else if (this.locationId === 'hillsboro_east') {
+      this.add.rectangle(x, 212 - height, width - 5, 4, 0x485765).setStrokeStyle(1, 0xd5e1e6);
+      this.add.circle(x - 7, 214 - height, 2, 0xffe36a).setDepth(2);
+      this.add.circle(x + 7, 214 - height, 2, 0x71e6ff).setDepth(2);
+    } else if (this.locationId === 'milwaukie') {
+      this.add.ellipse(x, 216 - height, width + 5, 8, 0x315f67).setStrokeStyle(2, 0x8bd6df);
+      this.add.line(0, 0, x - 10, 211 - height, x + 10, 217 - height, 0xc9f4ef, 1).setOrigin(0, 0);
+    } else if (this.locationId === 'walla_walla') {
+      for (let stalk = -8; stalk <= 8; stalk += 4)
+        this.add.line(0, 0, x + stalk, 218, x + stalk + 2, 195 - height / 2, 0xf2d469, 1).setOrigin(0, 0);
+    }
     this.physics.add.existing(obstacle, true);
     this.physics.add.collider(this.player!, obstacle);
     this.physics.add.collider(obstacle, floor);
@@ -370,6 +385,39 @@ export class RouteActionScene extends Phaser.Scene {
       this.add
         .triangle(x, 218 - height, 0, 9, 8, 0, 16, 9, 0xff8a45)
         .setOrigin(0.5, 1);
+  }
+
+  private createWeather(): void {
+    const color = {
+      hillsboro_west: 0xc98db7,
+      hillsboro_east: 0xbfeaff,
+      milwaukie: 0xd5f5f4,
+      walla_walla: 0xf5d675,
+      bend: 0xff8758,
+    }[this.locationId];
+    for (let index = 0; index < 28; index += 1) {
+      const x = (index * 71) % 512;
+      const y = 72 + ((index * 37) % 128);
+      const particle = this.locationId === 'hillsboro_east'
+        ? this.add.line(0, 0, x, y, x - 5, y + 12, color, 0.42).setOrigin(0, 0)
+        : this.locationId === 'milwaukie'
+          ? this.add.ellipse(x, y, 18, 3, color, 0.14)
+          : this.locationId === 'walla_walla'
+            ? this.add.rectangle(x, y, 5, 2, color, 0.5).setAngle(index * 19)
+            : this.locationId === 'bend'
+              ? this.add.circle(x, y, index % 3 + 1, color, 0.42)
+              : this.add.ellipse(x, y, 4, 7, color, 0.35).setAngle(index * 31);
+      particle.setDepth(1);
+      this.tweens.add({
+        targets: particle,
+        x: particle.x + (this.locationId === 'walla_walla' ? -95 : this.locationId === 'hillsboro_east' ? -22 : 28),
+        y: particle.y + (this.locationId === 'bend' ? -75 : 62),
+        alpha: 0,
+        duration: 1500 + (index % 7) * 230,
+        delay: (index % 9) * 140,
+        repeat: -1,
+      });
+    }
   }
 
   private spawnEnemy(x: number, y: number, flying: boolean): void {
@@ -593,7 +641,6 @@ export class RouteActionScene extends Phaser.Scene {
       resources: { ...this.save.resources, life: result.health.current },
       savedAt: new Date().toISOString(),
     };
-    this.save = addScore(this.save, SCORE_VALUES.actionSequence, new Date().toISOString());
     this.repository.save(this.save);
     this.player.setVelocity(direction * 92, -90).setTintFill(0xff6655);
     this.time.delayedCall(180, () => this.player?.clearTint());
@@ -667,6 +714,7 @@ export class RouteActionScene extends Phaser.Scene {
       },
       savedAt: new Date().toISOString(),
     };
+    this.save = addScore(this.save, SCORE_VALUES.actionSequence, new Date().toISOString());
     this.repository.save(this.save);
     this.sequenceOver = true;
     this.player?.setVelocity(0, 0);
