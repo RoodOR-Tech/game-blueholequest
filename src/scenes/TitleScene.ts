@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameAudio } from '../audio/GameAudio';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { sceneForCheckpoint } from '../game/progression/checkpoints';
@@ -29,6 +30,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    gameAudio.bind(this, 'title');
     this.save = this.repository.load() ?? undefined;
     this.drawBackdrop();
     this.createMenu();
@@ -105,6 +107,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private activateSelection(): void {
+    gameAudio.play('confirm');
     sanitizeGamepads(this);
     const continuing = Boolean(this.save) && this.selectedIndex === 0;
     if (continuing) {
@@ -239,3 +242,4 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
   }
 }
+

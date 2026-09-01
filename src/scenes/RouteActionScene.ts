@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameAudio } from '../audio/GameAudio';
 import {
   BUDDA_SPRITE_SCALE,
   BUDDA_TEXTURE_KEY,
@@ -66,6 +67,7 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   create(): void {
+    gameAudio.bind(this, 'route');
     this.resetState();
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
@@ -397,6 +399,7 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private attack(time: number): void {
+    gameAudio.play('attack');
     if (!this.player) return;
     this.nextAttackAt = time + 280;
     this.attackingUntil = time + 210;
@@ -423,6 +426,7 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private damagePlayer(time: number, direction: number): void {
+    gameAudio.play('hit');
     if (!this.player || !this.save || this.sequenceOver) return;
     this.invulnerableUntil = time + 900;
     const result = applyDamage(
@@ -474,6 +478,7 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private completeSequence(): void {
+    gameAudio.play('clear');
     if (!this.save || this.sequenceOver) return;
     const route = routeForLocation(this.locationId);
     const event = route.events[this.eventIndex];
@@ -577,3 +582,4 @@ export class RouteActionScene extends Phaser.Scene {
     flyer.generateTexture('route-flyer', 26, 20).destroy();
   }
 }
+

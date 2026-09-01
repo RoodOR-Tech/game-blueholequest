@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameAudio } from '../audio/GameAudio';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { BOSS_LOCATIONS, bossLocationById } from '../game/progression/bossLocations';
 import { LOCATION_ARRIVALS, locationArrivalFlag } from '../game/progression/locationArrivals';
@@ -25,6 +26,7 @@ export class LocationArrivalScene extends Phaser.Scene {
   }
 
   create(): void {
+    gameAudio.bind(this, 'route');
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
@@ -73,6 +75,7 @@ export class LocationArrivalScene extends Phaser.Scene {
   private continueJourney(): void {
     if (this.leaving) return;
     this.leaving = true;
+    gameAudio.play('confirm');
     this.cameras.main.fadeOut(280, 0, 0, 0);
     this.time.delayedCall(300, () => this.scene.start('highway-26', { routeIndex: this.routeIndex, nodeIndex: 0, traveling: true }));
   }

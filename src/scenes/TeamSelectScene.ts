@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameAudio } from '../audio/GameAudio';
 import { TEAMS, type TeamDefinition } from '../content/teams';
 import { drawTeamPortrait } from '../actors/teamAppearance';
 import { sanitizeGamepads } from '../game/input/PhaserInput';
@@ -24,6 +25,7 @@ export class TeamSelectScene extends Phaser.Scene {
   }
 
   create(): void {
+    gameAudio.bind(this, 'title');
     this.cameras.main.setBackgroundColor('#08111d');
     this.add
       .text(128, 14, 'CHOOSE YOUR FAMILY TEAM', {
@@ -143,6 +145,7 @@ export class TeamSelectScene extends Phaser.Scene {
   }
 
   private confirmSelection(): void {
+    gameAudio.play('confirm');
     const team = TEAMS[this.selectedIndex];
     if (!team || !this.statusText) return;
     if (!team.productionReady) {
@@ -159,3 +162,4 @@ export class TeamSelectScene extends Phaser.Scene {
     this.scene.start('blue-hole-hub');
   }
 }
+

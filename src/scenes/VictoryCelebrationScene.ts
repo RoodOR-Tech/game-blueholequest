@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameAudio } from '../audio/GameAudio';
 import {
   BUDDA_SPRITE_SCALE,
   ensureBuddaTexture,
@@ -32,6 +33,7 @@ export class VictoryCelebrationScene extends Phaser.Scene {
   }
 
   create(): void {
+    gameAudio.bind(this, 'victory');
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
@@ -147,6 +149,7 @@ export class VictoryCelebrationScene extends Phaser.Scene {
   }
 
   private launchFirework(): void {
+    gameAudio.play('firework');
     const x = Phaser.Math.Between(25, 231);
     const y = Phaser.Math.Between(76, 135);
     const color = Phaser.Utils.Array.GetRandom([...FIREWORK_COLORS]);
@@ -165,3 +168,4 @@ export class VictoryCelebrationScene extends Phaser.Scene {
     this.time.delayedCall(380, () => this.scene.start('blue-hole-hub'));
   }
 }
+

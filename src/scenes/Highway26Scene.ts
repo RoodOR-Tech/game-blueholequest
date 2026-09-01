@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameAudio } from '../audio/GameAudio';
 import { PhaserInput } from '../game/input/PhaserInput';
 import { BOSS_LOCATIONS } from '../game/progression/bossLocations';
 import {
@@ -60,6 +61,7 @@ export class Highway26Scene extends Phaser.Scene {
   }
 
   create(): void {
+    gameAudio.bind(this, 'route');
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
@@ -233,6 +235,7 @@ export class Highway26Scene extends Phaser.Scene {
   }
 
   private resolveEvent(): void {
+    gameAudio.play(this.activeEvent?.kind === 'calamity' ? 'calamity' : 'confirm');
     const route = LOCATION_ROUTES[this.routeIndex];
     const event = this.activeEvent;
     const choice = event?.choices[this.choiceIndex];
@@ -461,6 +464,7 @@ export class Highway26Scene extends Phaser.Scene {
   }
 
   private beginJourney(): void {
+    gameAudio.play('confirm');
     const route = LOCATION_ROUTES[this.routeIndex];
     if (!route || !this.save) return;
     if (!this.save.flags[locationArrivalFlag(route.locationId)]) {
@@ -546,3 +550,4 @@ export class Highway26Scene extends Phaser.Scene {
     return 148 - index * 16;
   }
 }
+

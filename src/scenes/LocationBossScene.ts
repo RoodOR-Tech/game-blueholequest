@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameAudio } from '../audio/GameAudio';
 import { configurePlayerBody, playerVisual } from '../actors/familyAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
@@ -54,6 +55,7 @@ export class LocationBossScene extends Phaser.Scene {
   }
 
   create(): void {
+    gameAudio.bind(this, 'boss');
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
@@ -170,6 +172,7 @@ export class LocationBossScene extends Phaser.Scene {
   }
 
   private attack(time: number): void {
+    gameAudio.play('attack');
     if (!this.player) return;
     this.nextAttackAt = time + ATTACK_COOLDOWN;
     this.attackingUntil = time + 190;
@@ -369,6 +372,7 @@ export class LocationBossScene extends Phaser.Scene {
   }
 
   private damagePlayer(time: number): void {
+    gameAudio.play('hit');
     if (!this.player || !this.save || this.encounterOver) return;
     this.invulnerableUntil = time + INVULNERABLE_MS;
     const result = applyDamage(
@@ -422,6 +426,7 @@ export class LocationBossScene extends Phaser.Scene {
   }
 
   private defeatBoss(): void {
+    gameAudio.play('clear');
     if (!this.boss) return;
     const x = this.boss.x;
     const y = this.boss.y;
@@ -460,6 +465,7 @@ export class LocationBossScene extends Phaser.Scene {
   }
 
   private collectArtifact(): void {
+    gameAudio.play('artifact');
     if (!this.artifact?.active || !this.save) return;
     this.artifact.destroy();
     this.save = awardLocationArtifact(
@@ -650,3 +656,4 @@ export class LocationBossScene extends Phaser.Scene {
     }
   }
 }
+
