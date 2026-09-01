@@ -11,6 +11,7 @@ export class LocationArrivalScene extends Phaser.Scene {
   private save?: SaveData;
   private controls?: PhaserInput;
   private leaving = false;
+  private inputReady = false;
   private readonly repository = new SaveRepository(window.localStorage);
 
   constructor() {
@@ -19,6 +20,8 @@ export class LocationArrivalScene extends Phaser.Scene {
 
   init(data: { routeIndex?: number }): void {
     this.routeIndex = Phaser.Math.Clamp(data.routeIndex ?? 0, 0, BOSS_LOCATIONS.length - 1);
+    this.leaving = false;
+    this.inputReady = false;
   }
 
   create(): void {
@@ -40,13 +43,17 @@ export class LocationArrivalScene extends Phaser.Scene {
     this.add.text(128, 64, arrival.subtitle, {
       align: 'center', color: '#ffffff', fontFamily: 'monospace', fontSize: '6px', wordWrap: { width: 218 },
     }).setOrigin(0.5);
-    const button = this.add.text(128, 211, 'A / ENTER • BEGIN THIS ROUTE', {
+    const button = this.add.text(128, 211, 'A / ENTER / TAP • BEGIN THIS ROUTE', {
       backgroundColor: '#122f43ee', color: '#f6d77a', fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold', padding: { x: 9, y: 6 },
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     button.on('pointerdown', () => this.continueJourney());
+    this.input.once('pointerdown', () => {
+      if (this.inputReady) this.continueJourney();
+    });
     this.tweens.add({ targets: button, alpha: 0.65, duration: 700, yoyo: true, repeat: -1 });
     this.controls = new PhaserInput(this);
     new TouchControls(this, this.controls);
+    this.time.delayedCall(250, () => { this.inputReady = true; });
     this.save = {
       ...this.save,
       flags: { ...this.save.flags, [locationArrivalFlag(location.id)]: true },
@@ -57,7 +64,7 @@ export class LocationArrivalScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (!this.controls || this.leaving) return;
+    if (!this.controls || this.leaving || !this.inputReady) return;
     this.controls.update(this.input.gamepad?.getPad(0));
     if (this.controls.actions.get('confirm').pressed || this.controls.actions.get('jump').pressed)
       this.continueJourney();
@@ -106,3 +113,4 @@ export class LocationArrivalScene extends Phaser.Scene {
     }
   }
 }
+

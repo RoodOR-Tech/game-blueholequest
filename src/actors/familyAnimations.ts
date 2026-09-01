@@ -76,10 +76,57 @@ export function cleanConnectedBackground(scene: Phaser.Scene, sourceKey: string)
     if (y > 0) enqueue(x, y - 1);
     if (y + 1 < source.height) enqueue(x, y + 1);
   }
+  removeSmallOpaqueComponents(pixels.data, source.width, source.height, 8);
   context.putImageData(pixels, 0, 0);
   canvasTexture.refresh();
   scene.textures.remove(sourceKey);
   return canvasTexture;
+}
+
+/** Removes isolated generation debris without erasing any connected character detail. */
+export function removeSmallOpaqueComponents(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+  frameCount: number,
+): void {
+  const frameWidth = Math.floor(width / frameCount);
+  const minimumComponentPixels = Math.max(240, Math.floor(frameWidth * height * 0.0015));
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    const startX = frame * frameWidth;
+    const endX = frame === frameCount - 1 ? width : startX + frameWidth;
+    const visited = new Uint8Array((endX - startX) * height);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = startX; x < endX; x += 1) {
+        const local = y * (endX - startX) + x - startX;
+        if (visited[local] || pixels[(y * width + x) * 4 + 3] === 0) continue;
+        const component: number[] = [];
+        const pending = [y * width + x];
+        visited[local] = 1;
+        for (let cursor = 0; cursor < pending.length; cursor += 1) {
+          const position = pending[cursor]!;
+          component.push(position);
+          const currentX = position % width;
+          const currentY = Math.floor(position / width);
+          for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+            for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+              if (offsetX === 0 && offsetY === 0) continue;
+              const nextX = currentX + offsetX;
+              const nextY = currentY + offsetY;
+              if (nextX < startX || nextX >= endX || nextY < 0 || nextY >= height) continue;
+              const nextLocal = nextY * (endX - startX) + nextX - startX;
+              if (visited[nextLocal]) continue;
+              visited[nextLocal] = 1;
+              const nextPosition = nextY * width + nextX;
+              if (pixels[nextPosition * 4 + 3] !== 0) pending.push(nextPosition);
+            }
+          }
+        }
+        if (component.length < minimumComponentPixels)
+          component.forEach((position) => { pixels[position * 4 + 3] = 0; });
+      }
+    }
+  }
 }
 
 function createAnimation(
@@ -134,3 +181,4 @@ export function configurePlayerBody(
       .setSize(teamId === 'jason_hilary' ? 190 : 165, 420)
       .setOffset(teamId === 'jason_hilary' ? 35 : 48, 180);
 }
+
