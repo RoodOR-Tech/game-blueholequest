@@ -117,9 +117,11 @@ export class RouteActionScene extends Phaser.Scene {
         ...this.definition.enemyXs,
         ...this.definition.flyingEnemyXs,
       ];
-      const x = [preferredX, preferredX - 42, preferredX + 42, preferredX - 72]
-        .map((candidate) => Phaser.Math.Clamp(candidate, 65, 455))
-        .find((candidate) => occupied.every((other) => Math.abs(candidate - other) > 34)) ?? preferredX;
+      const candidates = Array.from({ length: 40 }, (_, index) => 65 + index * 10)
+        .sort((a, b) => Math.abs(a - preferredX) - Math.abs(b - preferredX));
+      const x = candidates.find((candidate) =>
+        occupied.every((other) => Math.abs(candidate - other) > 44),
+      ) ?? 75;
       this.budda = this.add
         .sprite(x, 202, BUDDA_TEXTURE_KEY, buddaFrame(this.locationId))
         .setScale(BUDDA_SPRITE_SCALE)
@@ -259,7 +261,7 @@ export class RouteActionScene extends Phaser.Scene {
     const sprite = this.physics.add.sprite(
       x,
       y,
-      flying ? 'route-flyer' : 'route-creature',
+      `${flying ? 'route-flyer' : 'route-creature'}-${this.locationId}`,
     );
     sprite.setImmovable(true).setCollideWorldBounds(true);
     sprite.body.setAllowGravity(false);
@@ -383,10 +385,22 @@ export class RouteActionScene extends Phaser.Scene {
       if (!enemy.sprite.active) return;
       const distance = this.player!.x - enemy.sprite.x;
       if (enemy.flying) {
-        enemy.sprite.y = enemy.originY + Math.sin(time / 220 + index) * 18;
-        enemy.sprite.setVelocityX(Math.abs(distance) < 95 ? Math.sign(distance) * 31 : 0);
+        const waveSpeed = this.locationId === 'hillsboro_east' ? 125 : this.locationId === 'bend' ? 170 : 220;
+        const waveHeight = this.locationId === 'walla_walla' ? 28 : 18;
+        enemy.sprite.y = enemy.originY + Math.sin(time / waveSpeed + index) * waveHeight;
+        const pursuit = this.locationId === 'hillsboro_east' ? 48 : this.locationId === 'bend' ? 39 : 31;
+        enemy.sprite.setVelocityX(Math.abs(distance) < 110 ? Math.sign(distance) * pursuit : 0);
       } else {
-        enemy.sprite.setVelocityX(Math.abs(distance) < 75 ? Math.sign(distance) * 23 : Math.sin(time / 500 + index) * 15);
+        const pursuitRange = this.locationId === 'bend' ? 120 : this.locationId === 'milwaukie' ? 62 : 82;
+        const chaseSpeed = this.locationId === 'bend' ? 42 : this.locationId === 'walla_walla' ? 31 : 23;
+        const patrolSpeed = this.locationId === 'milwaukie' ? 22 : 15;
+        enemy.sprite.setVelocityX(
+          Math.abs(distance) < pursuitRange
+            ? Math.sign(distance) * chaseSpeed
+            : Math.sin(time / 500 + index) * patrolSpeed,
+        );
+        if (this.locationId === 'hillsboro_west')
+          enemy.sprite.y = enemy.originY - Math.max(0, Math.sin(time / 330 + index) * 8);
         enemy.sprite.setFlipX(enemy.sprite.body.velocity.x < 0);
       }
       if (
@@ -565,21 +579,46 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private createTextures(): void {
-    ['route-creature', 'route-flyer'].forEach((key) => {
+    const creatureKey = `route-creature-${this.locationId}`;
+    const flyerKey = `route-flyer-${this.locationId}`;
+    [creatureKey, flyerKey].forEach((key) => {
       if (this.textures.exists(key)) this.textures.remove(key);
     });
     const creature = this.add.graphics();
-    creature.fillStyle(this.definition.accentColor).fillEllipse(13, 10, 24, 16);
-    creature.fillStyle(0xffffff).fillCircle(8, 7, 3).fillCircle(18, 7, 3);
-    creature.fillStyle(0x17151d).fillCircle(8, 7, 1).fillCircle(18, 7, 1);
-    creature.lineStyle(2, 0x17151d).lineBetween(5, 15, 2, 20).lineBetween(20, 15, 24, 20);
-    creature.generateTexture('route-creature', 26, 22).destroy();
+    if (this.locationId === 'hillsboro_west') {
+      creature.fillStyle(0x53284f).fillEllipse(13, 11, 24, 15);
+      creature.lineStyle(2, 0xb95e9d).lineBetween(4, 8, 0, 3).lineBetween(21, 8, 26, 3);
+    } else if (this.locationId === 'hillsboro_east') {
+      creature.fillStyle(0xd6b52d).fillRect(3, 5, 20, 13);
+      creature.lineStyle(2, 0xffff91).lineBetween(2, 11, 24, 2).lineBetween(5, 20, 21, 10);
+    } else if (this.locationId === 'milwaukie') {
+      creature.fillStyle(0x2c91a2).fillEllipse(13, 12, 20, 13);
+      creature.lineStyle(3, 0x163f55).lineBetween(5, 12, 0, 7).lineBetween(21, 12, 26, 7).lineBetween(7, 17, 3, 21).lineBetween(19, 17, 23, 21);
+    } else if (this.locationId === 'walla_walla') {
+      creature.fillStyle(0xb7842d).fillEllipse(13, 11, 23, 15);
+      creature.lineStyle(2, 0xf5dd73).lineBetween(6, 4, 3, 0).lineBetween(12, 4, 12, 0).lineBetween(19, 5, 22, 1);
+    } else {
+      creature.fillStyle(0x432d35).fillEllipse(13, 12, 24, 17);
+      creature.fillStyle(0xff5d2f).fillTriangle(4, 8, 8, 0, 11, 9).fillTriangle(15, 9, 19, 0, 23, 9);
+    }
+    creature.fillStyle(0xffffff).fillCircle(8, 9, 3).fillCircle(18, 9, 3);
+    creature.fillStyle(0x17151d).fillCircle(8, 9, 1).fillCircle(18, 9, 1);
+    creature.generateTexture(creatureKey, 26, 22).destroy();
     const flyer = this.add.graphics();
-    flyer.fillStyle(this.definition.accentColor).fillTriangle(0, 10, 13, 2, 9, 19);
+    const flyerColor = {
+      hillsboro_west: 0x9b4e88,
+      hillsboro_east: 0xffe45c,
+      milwaukie: 0x69d7dc,
+      walla_walla: 0xe8c34f,
+      bend: 0xff6138,
+    }[this.locationId];
+    flyer.fillStyle(flyerColor).fillTriangle(0, 10, 13, 2, 9, 19);
     flyer.fillTriangle(26, 10, 13, 2, 17, 19);
-    flyer.fillStyle(0xffe18a).fillCircle(13, 10, 6);
+    flyer.fillStyle(this.locationId === 'bend' ? 0x34242b : 0xffe18a).fillCircle(13, 10, 6);
     flyer.fillStyle(0x17151d).fillCircle(11, 9, 2).fillCircle(16, 9, 2);
-    flyer.generateTexture('route-flyer', 26, 20).destroy();
+    if (this.locationId === 'hillsboro_east')
+      flyer.lineStyle(2, 0xffffff).lineBetween(13, 3, 18, 0);
+    flyer.generateTexture(flyerKey, 26, 20).destroy();
   }
 }
 
