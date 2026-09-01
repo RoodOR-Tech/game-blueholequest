@@ -1,5 +1,10 @@
 import Phaser from 'phaser';
-import { BUDDA_TEXTURE_KEY, ensureBuddaTexture } from '../actors/budda';
+import {
+  BUDDA_SPRITE_SCALE,
+  BUDDA_TEXTURE_KEY,
+  buddaFrame,
+  ensureBuddaTexture,
+} from '../actors/budda';
 import { configurePlayerBody, playerVisual } from '../actors/familyAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
@@ -113,7 +118,10 @@ export class RouteActionScene extends Phaser.Scene {
       const x = [preferredX, preferredX - 42, preferredX + 42, preferredX - 72]
         .map((candidate) => Phaser.Math.Clamp(candidate, 65, 455))
         .find((candidate) => occupied.every((other) => Math.abs(candidate - other) > 34)) ?? preferredX;
-      this.budda = this.add.sprite(x, 202, BUDDA_TEXTURE_KEY).setScale(1.15).setDepth(3);
+      this.budda = this.add
+        .sprite(x, 202, BUDDA_TEXTURE_KEY, buddaFrame(this.locationId))
+        .setScale(BUDDA_SPRITE_SCALE)
+        .setDepth(3);
       this.buddaPrompt = this.add
         .text(x, 176, 'BUDDA • A / B / ENTER: TALK', {
           backgroundColor: '#08111df2',

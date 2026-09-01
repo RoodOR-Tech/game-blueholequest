@@ -32,7 +32,7 @@ export function registerFamilyAnimations(scene: Phaser.Scene): void {
   });
 }
 
-function cleanConnectedBackground(scene: Phaser.Scene, sourceKey: string): Phaser.Textures.Texture {
+export function cleanConnectedBackground(scene: Phaser.Scene, sourceKey: string): Phaser.Textures.Texture {
   const source = scene.textures.get(sourceKey).getSourceImage() as HTMLImageElement;
   const cleanKey = `${sourceKey}-clean`;
   if (scene.textures.exists(cleanKey)) return scene.textures.get(cleanKey);

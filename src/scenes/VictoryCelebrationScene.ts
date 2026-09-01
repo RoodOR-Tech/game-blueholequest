@@ -1,5 +1,10 @@
 import Phaser from 'phaser';
-import { ensureBuddaTexture, BUDDA_TEXTURE_KEY } from '../actors/budda';
+import {
+  BUDDA_SPRITE_SCALE,
+  ensureBuddaTexture,
+  BUDDA_TEXTURE_KEY,
+  buddaFrame,
+} from '../actors/budda';
 import { playerVisual } from '../actors/familyAnimations';
 import type { TeamId } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
@@ -118,7 +123,10 @@ export class VictoryCelebrationScene extends Phaser.Scene {
       hero.setScale(teamId === 'dad_paula' ? 0.12 : 0.72).play(visual.idle);
       this.tweens.add({ targets: hero, y: 174, angle: index % 2 ? 3 : -3, duration: 330 + index * 45, yoyo: true, repeat: -1, delay: index * 80 });
     });
-    const budda = this.add.sprite(128, 199, BUDDA_TEXTURE_KEY).setScale(1.15).setDepth(22);
+    const budda = this.add
+      .sprite(128, 199, BUDDA_TEXTURE_KEY, buddaFrame('hillsboro_east'))
+      .setScale(BUDDA_SPRITE_SCALE)
+      .setDepth(22);
     this.tweens.add({ targets: budda, angle: { from: -5, to: 5 }, duration: 280, yoyo: true, repeat: -1 });
     this.add.text(128, 207, 'BUDDA APPROVES', { color: '#ffd68a', fontFamily: 'monospace', fontSize: '5px' }).setOrigin(0.5);
   }

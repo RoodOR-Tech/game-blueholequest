@@ -8,6 +8,7 @@ import {
   preloadFamilySprites,
   registerFamilyAnimations,
 } from '../actors/familyAnimations';
+import { preloadBuddaSprites } from '../actors/budda';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -17,6 +18,7 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     this.load.image(DAD_TEXTURE_KEY, DAD_SPRITE_PATH);
     preloadFamilySprites(this);
+    preloadBuddaSprites(this);
   }
 
   create(): void {

@@ -1,5 +1,10 @@
 import Phaser from 'phaser';
-import { BUDDA_TEXTURE_KEY, ensureBuddaTexture } from '../actors/budda';
+import {
+  BUDDA_SPRITE_SCALE,
+  BUDDA_TEXTURE_KEY,
+  buddaFrame,
+  ensureBuddaTexture,
+} from '../actors/budda';
 import { configurePlayerBody, playerVisual } from '../actors/familyAnimations';
 import { getTeam } from '../content/teams';
 import { PhaserInput } from '../game/input/PhaserInput';
@@ -59,7 +64,9 @@ export class BlueHoleHubScene extends Phaser.Scene {
     this.drawRoom();
     ensureBuddaTexture(this);
     if (!this.save.flags[buddaFlag('rockaway')])
-      this.add.sprite(67, 145, BUDDA_TEXTURE_KEY).setScale(1.35);
+      this.add
+        .sprite(67, 145, BUDDA_TEXTURE_KEY, buddaFrame('rockaway'))
+        .setScale(BUDDA_SPRITE_SCALE);
     this.controls = new PhaserInput(this);
     new TouchControls(this, this.controls);
     this.createPlayer();
