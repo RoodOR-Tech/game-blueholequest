@@ -20,11 +20,11 @@ export function registerFamilyAnimations(scene: Phaser.Scene): void {
     const sheet = SHEETS[teamId];
     const texture = cleanConnectedBackground(scene, sheet.key);
     const image = texture.getSourceImage() as HTMLCanvasElement;
-    const frameWidth = Math.floor(image.width / 8);
     const frames = Array.from({ length: 8 }, (_, index) => `${teamId}-frame-${index}`);
     frames.forEach((frame, index) => {
+      const bounds = proportionalFrameBounds(image.width, 8, index);
       if (!texture.has(frame))
-        texture.add(frame, 0, index * frameWidth, 0, index === 7 ? image.width - index * frameWidth : frameWidth, image.height);
+        texture.add(frame, 0, bounds.x, 0, bounds.width, image.height);
     });
     createAnimation(scene, `${teamId}-idle`, sheet.key, frames.slice(0, 2), 2, -1);
     createAnimation(scene, `${teamId}-walk`, sheet.key, frames.slice(2, 5), 7, -1);
@@ -32,7 +32,11 @@ export function registerFamilyAnimations(scene: Phaser.Scene): void {
   });
 }
 
-export function cleanConnectedBackground(scene: Phaser.Scene, sourceKey: string): Phaser.Textures.Texture {
+export function cleanConnectedBackground(
+  scene: Phaser.Scene,
+  sourceKey: string,
+  frameCount = 8,
+): Phaser.Textures.Texture {
   const source = scene.textures.get(sourceKey).getSourceImage() as HTMLImageElement;
   const cleanKey = `${sourceKey}-clean`;
   if (scene.textures.exists(cleanKey)) return scene.textures.get(cleanKey);
@@ -76,11 +80,21 @@ export function cleanConnectedBackground(scene: Phaser.Scene, sourceKey: string)
     if (y > 0) enqueue(x, y - 1);
     if (y + 1 < source.height) enqueue(x, y + 1);
   }
-  removeSmallOpaqueComponents(pixels.data, source.width, source.height, 8);
+  removeSmallOpaqueComponents(pixels.data, source.width, source.height, frameCount);
   context.putImageData(pixels, 0, 0);
   canvasTexture.refresh();
   scene.textures.remove(sourceKey);
   return canvasTexture;
+}
+
+export function proportionalFrameBounds(
+  sheetWidth: number,
+  frameCount: number,
+  frameIndex: number,
+): { x: number; width: number } {
+  const x = Math.round((frameIndex * sheetWidth) / frameCount);
+  const end = Math.round(((frameIndex + 1) * sheetWidth) / frameCount);
+  return { x, width: end - x };
 }
 
 /** Removes isolated generation debris without erasing any connected character detail. */
@@ -90,11 +104,12 @@ export function removeSmallOpaqueComponents(
   height: number,
   frameCount: number,
 ): void {
-  const frameWidth = Math.floor(width / frameCount);
-  const minimumComponentPixels = Math.max(240, Math.floor(frameWidth * height * 0.0015));
+  const averageFrameWidth = width / frameCount;
+  const minimumComponentPixels = Math.max(240, Math.floor(averageFrameWidth * height * 0.0015));
   for (let frame = 0; frame < frameCount; frame += 1) {
-    const startX = frame * frameWidth;
-    const endX = frame === frameCount - 1 ? width : startX + frameWidth;
+    const bounds = proportionalFrameBounds(width, frameCount, frame);
+    const startX = bounds.x;
+    const endX = startX + bounds.width;
     const visited = new Uint8Array((endX - startX) * height);
     for (let y = 0; y < height; y += 1) {
       for (let x = startX; x < endX; x += 1) {

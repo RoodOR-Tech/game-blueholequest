@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { BuddaLocationId } from '../game/progression/budda';
-import { cleanConnectedBackground } from './familyAnimations';
+import { cleanConnectedBackground, proportionalFrameBounds } from './familyAnimations';
 
 const BUDDA_SOURCE_KEY = 'budda-sprites-v2';
 export const BUDDA_TEXTURE_KEY = `${BUDDA_SOURCE_KEY}-clean`;
@@ -21,21 +21,22 @@ export function preloadBuddaSprites(scene: Phaser.Scene): void {
 
 export function ensureBuddaTexture(scene: Phaser.Scene): void {
   if (scene.textures.exists(BUDDA_TEXTURE_KEY)) return;
-  const texture = cleanConnectedBackground(scene, BUDDA_SOURCE_KEY);
+  const texture = cleanConnectedBackground(scene, BUDDA_SOURCE_KEY, 6);
   const image = texture.getSourceImage() as HTMLCanvasElement;
-  const width = Math.floor(image.width / 6);
-  (Object.values(BUDDA_FRAMES) as string[]).forEach((frame, index) =>
+  (Object.values(BUDDA_FRAMES) as string[]).forEach((frame, index) => {
+    const bounds = proportionalFrameBounds(image.width, 6, index);
     texture.add(
       frame,
       0,
-      index * width,
+      bounds.x,
       0,
-      index === 5 ? image.width - index * width : width,
+      bounds.width,
       image.height,
-    ),
-  );
+    );
+  });
 }
 
 export function buddaFrame(locationId: BuddaLocationId): string {
   return BUDDA_FRAMES[locationId];
 }
+
