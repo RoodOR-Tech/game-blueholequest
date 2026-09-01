@@ -4,7 +4,8 @@ import { cleanConnectedBackground, proportionalFrameBounds } from './familyAnima
 
 const BUDDA_SOURCE_KEY = 'budda-sprites-v2';
 export const BUDDA_TEXTURE_KEY = `${BUDDA_SOURCE_KEY}-clean`;
-export const BUDDA_SPRITE_SCALE = 0.18;
+// One shared scale keeps Budda consistently sized in the hub, routes, and finale.
+export const BUDDA_SPRITE_SCALE = 0.117;
 
 const BUDDA_FRAMES: Readonly<Record<BuddaLocationId, string>> = {
   rockaway: 'budda-rockaway',
@@ -39,4 +40,3 @@ export function ensureBuddaTexture(scene: Phaser.Scene): void {
 export function buddaFrame(locationId: BuddaLocationId): string {
   return BUDDA_FRAMES[locationId];
 }
-
