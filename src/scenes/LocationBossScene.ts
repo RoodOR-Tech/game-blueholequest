@@ -476,7 +476,7 @@ export class LocationBossScene extends Phaser.Scene {
     this.message?.setText(
       nextLocation
         ? `${this.location.artifactName} RECOVERED • +100 XP\nNEXT: ${nextLocation.label} • A: CONTINUE`
-        : `${this.location.artifactName} RECOVERED • +100 XP\nALL ARTIFACTS FOUND • A: RETURN`,
+        : `${this.location.artifactName} RECOVERED • +100 XP\nALL ARTIFACTS FOUND • A: CELEBRATE!`,
     );
     this.refreshHud();
   }
@@ -487,7 +487,7 @@ export class LocationBossScene extends Phaser.Scene {
     );
     const nextIndex = currentIndex + 1;
     if (nextIndex >= BOSS_LOCATIONS.length) {
-      this.scene.start('highway-26');
+      this.scene.start('victory-celebration');
       return;
     }
     this.scene.start('highway-26', {
