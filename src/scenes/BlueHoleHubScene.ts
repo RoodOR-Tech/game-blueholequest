@@ -43,7 +43,7 @@ interface HubFixture {
 const FIXTURES: readonly HubFixture[] = [
   { id: 'fridge', x: 35, y: 113 },
   { id: 'mantle', x: 191, y: 99 },
-  { id: 'exit', x: 128, y: 218 },
+  { id: 'exit', x: 220, y: 218 },
   { id: 'budda', x: 67, y: 145 },
 ];
 
@@ -175,11 +175,11 @@ export class BlueHoleHubScene extends Phaser.Scene {
     graphics.fillStyle(0xffc14f).fillTriangle(207, 151, 215, 131, 224, 151);
     graphics.fillStyle(0x3a2119).fillRect(169, 74, 80, 7);
 
-    // Beach-access exit mat. The player begins close enough to see its prompt.
-    graphics.fillStyle(0x172a35).fillRoundedRect(105, 211, 46, 18, 2);
-    graphics.lineStyle(1, 0xf6d77a).strokeRoundedRect(105, 211, 46, 18, 2);
+    // Beach-access exit mat stays clear of the centered dialogue panel.
+    graphics.fillStyle(0x172a35).fillRoundedRect(195, 211, 50, 18, 2);
+    graphics.lineStyle(1, 0xf6d77a).strokeRoundedRect(195, 211, 50, 18, 2);
     this.add
-      .text(128, 217, 'TO HWY 26', {
+      .text(220, 217, 'TO HWY 26', {
         color: '#f6d77a',
         fontFamily: 'monospace',
         fontSize: '6px',
