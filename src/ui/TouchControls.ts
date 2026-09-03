@@ -22,6 +22,8 @@ const DIRECTION_BUTTONS: readonly TouchButtonDefinition[] = [
   { action: 'down', label: '▼', x: 38, y: 218, radius: 11 },
 ];
 
+const TOUCH_BUTTON_DEPTH = 700;
+
 export class TouchControls {
   constructor(
     scene: Phaser.Scene,
@@ -30,8 +32,8 @@ export class TouchControls {
   ) {
     const buttons: readonly TouchButtonDefinition[] = [
       ...DIRECTION_BUTTONS,
-      { action: actions.primary, label: 'A', x: 226, y: 187, radius: 14 },
-      { action: actions.secondary, label: 'B', x: 196, y: 198, radius: 10 },
+      { action: actions.primary, label: 'A', x: 228, y: 185, radius: 17 },
+      { action: actions.secondary, label: 'B', x: 192, y: 211, radius: 15 },
     ];
     buttons.forEach((definition) => {
       const button = scene.add
@@ -39,7 +41,7 @@ export class TouchControls {
         .setStrokeStyle(1, 0xcfe9f4, 0.75)
         .setScrollFactor(0)
         .setInteractive({ useHandCursor: true })
-        .setDepth(300);
+        .setDepth(TOUCH_BUTTON_DEPTH);
       const label = scene.add
         .text(definition.x, definition.y, definition.label, {
           color: '#ffffff',
@@ -50,7 +52,7 @@ export class TouchControls {
         .setOrigin(0.5)
         .setAlpha(0.8)
         .setScrollFactor(0)
-        .setDepth(301);
+        .setDepth(TOUCH_BUTTON_DEPTH + 1);
 
       const release = (): void => {
         input.setVirtualAction(definition.action, false);
