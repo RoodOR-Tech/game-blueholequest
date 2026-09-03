@@ -16,10 +16,10 @@ export interface TouchControlActions {
 }
 
 const DIRECTION_BUTTONS: readonly TouchButtonDefinition[] = [
-  { action: 'up', label: '▲', x: 34, y: 174, radius: 10 },
-  { action: 'left', label: '◀', x: 21, y: 187, radius: 10 },
-  { action: 'right', label: '▶', x: 47, y: 187, radius: 10 },
-  { action: 'down', label: '▼', x: 34, y: 200, radius: 10 },
+  { action: 'up', label: '▲', x: 38, y: 162, radius: 11 },
+  { action: 'left', label: '◀', x: 11, y: 190, radius: 11 },
+  { action: 'right', label: '▶', x: 65, y: 190, radius: 11 },
+  { action: 'down', label: '▼', x: 38, y: 218, radius: 11 },
 ];
 
 export class TouchControls {
