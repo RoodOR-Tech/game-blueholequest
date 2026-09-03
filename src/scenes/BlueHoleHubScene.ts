@@ -99,10 +99,9 @@ export class BlueHoleHubScene extends Phaser.Scene {
 
     this.drawRoom();
     ensureBuddaTexture(this);
-    if (!this.save.flags[buddaFlag('rockaway')])
-      this.add
-        .sprite(67, 145, BUDDA_TEXTURE_KEY, buddaFrame('rockaway'))
-        .setScale(BUDDA_SPRITE_SCALE);
+    this.add
+      .sprite(67, 145, BUDDA_TEXTURE_KEY, buddaFrame('rockaway'))
+      .setScale(BUDDA_SPRITE_SCALE);
     this.controls = new PhaserInput(this);
     new TouchControls(this, this.controls);
     this.createPlayer();
@@ -482,3 +481,4 @@ export class BlueHoleHubScene extends Phaser.Scene {
     sharpenSceneText(this);
   }
 }
+

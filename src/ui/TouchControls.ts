@@ -103,10 +103,16 @@ export class TouchControls {
     const actions = document.createElement('div');
     actions.className = 'landscape-touch-controls__actions';
 
-    buttons.forEach((definition) => {
+    buttons.forEach((definition, index) => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = `landscape-touch-controls__button landscape-touch-controls__button--${definition.action}`;
+      const role =
+        index < DIRECTION_BUTTONS.length
+          ? 'direction'
+          : index === DIRECTION_BUTTONS.length
+            ? 'primary'
+            : 'secondary';
+      button.className = `landscape-touch-controls__button landscape-touch-controls__button--${definition.action} landscape-touch-controls__button--${role}`;
       button.textContent = definition.label;
       button.setAttribute('aria-label', definition.action);
 

@@ -79,8 +79,8 @@ export class TitleScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerover', () => {
+          if (this.selectedIndex !== index) this.confirmingNewGame = false;
           this.selectedIndex = index;
-          this.confirmingNewGame = false;
           this.renderSelection();
         })
         .on('pointerdown', () => {
@@ -304,3 +304,4 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
   }
 }
+

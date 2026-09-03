@@ -81,10 +81,7 @@ canvas {
 }
 
 .landscape-touch-controls__button--up,
-.landscape-touch-controls__button--down,
-.landscape-touch-controls__button--confirm,
-.landscape-touch-controls__button--jump,
-.landscape-touch-controls__button--attack {
+.landscape-touch-controls__button--down {
   left: 50%;
   transform: translateX(-50%);
 }
@@ -109,14 +106,13 @@ canvas {
   bottom: 0;
 }
 
-.landscape-touch-controls__button--confirm,
-.landscape-touch-controls__button--jump,
-.landscape-touch-controls__button--attack {
-  top: 8%;
+.landscape-touch-controls__button--primary {
+  top: 30%;
+  right: 4%;
 }
 
-.landscape-touch-controls__button--cancel {
-  right: 8%;
-  bottom: 8%;
+.landscape-touch-controls__button--secondary {
+  left: 14%;
+  bottom: 20%;
 }
 
