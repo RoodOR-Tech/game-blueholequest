@@ -1,0 +1,118 @@
+:root {
+  color-scheme: dark;
+  font-family: monospace;
+  background: #08111d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#game {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: radial-gradient(circle at center, #183650 0, #08111d 65%);
+  overscroll-behavior: none;
+}
+
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+}
+
+.landscape-touch-controls {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.landscape-touch-controls.is-visible {
+  display: block;
+}
+
+.landscape-touch-controls__directions,
+.landscape-touch-controls__actions {
+  position: absolute;
+  top: 50%;
+  width: min(25vw, 190px);
+  height: min(82vh, 310px);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.landscape-touch-controls__directions {
+  left: max(10px, env(safe-area-inset-left));
+}
+
+.landscape-touch-controls__actions {
+  right: max(10px, env(safe-area-inset-right));
+}
+
+.landscape-touch-controls__button {
+  position: absolute;
+  width: clamp(72px, 19vh, 92px);
+  height: clamp(72px, 19vh, 92px);
+  padding: 0;
+  border: 3px solid rgba(207, 233, 244, 0.92);
+  border-radius: 50%;
+  background: rgba(8, 17, 29, 0.72);
+  color: #fff;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  font: 700 clamp(28px, 7vh, 42px) / 1 monospace;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.landscape-touch-controls__button.is-pressed {
+  background: rgba(45, 120, 155, 0.95);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.landscape-touch-controls__button--up,
+.landscape-touch-controls__button--down {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.landscape-touch-controls__button--up {
+  top: 0;
+}
+
+.landscape-touch-controls__button--left {
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.landscape-touch-controls__button--right {
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+}
+
+.landscape-touch-controls__button--down {
+  bottom: 0;
+}
+
+.landscape-touch-controls__button--primary {
+  top: 30%;
+  right: 4%;
+}
+
+.landscape-touch-controls__button--secondary {
+  left: 14%;
+  bottom: 20%;
+}
+
