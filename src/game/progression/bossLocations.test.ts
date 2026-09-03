@@ -11,7 +11,11 @@ import {
 describe('location boss progression', () => {
   it('awards each location crystal only once', () => {
     const location = BOSS_LOCATIONS[0];
-    const first = awardLocationArtifact(createNewSave('dad_paula'), location, 'one');
+    const first = awardLocationArtifact(
+      createNewSave('dad_paula'),
+      location,
+      'one',
+    );
     const second = awardLocationArtifact(first, location, 'two');
     expect(first.relics).toContain(location.artifactId);
     expect(first.stats.experience).toBe(100);
@@ -22,7 +26,11 @@ describe('location boss progression', () => {
 
   it('celebrates a recovered artifact at home and restores health', () => {
     const location = BOSS_LOCATIONS[0];
-    const damaged = awardLocationArtifact(createNewSave('dad_paula'), location, 'one');
+    const damaged = awardLocationArtifact(
+      createNewSave('dad_paula'),
+      location,
+      'one',
+    );
     const homecoming = celebrateHomecoming(
       { ...damaged, resources: { ...damaged.resources, life: 1, magic: 0 } },
       location,
@@ -42,4 +50,3 @@ describe('location boss progression', () => {
     expect(isLocationUnlocked(1, [BOSS_LOCATIONS[0].artifactId])).toBe(true);
   });
 });
-

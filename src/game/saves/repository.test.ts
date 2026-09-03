@@ -32,6 +32,22 @@ describe('SaveRepository', () => {
     expect(new SaveRepository(storage).load()).toBeNull();
   });
 
+  it('rejects structurally invalid saves without throwing', () => {
+    const storage = new MemoryStorage();
+    const save = createNewSave('dad_paula');
+    storage.setItem(
+      'blue-hole-quest:save',
+      JSON.stringify({ ...save, activeTeamId: 'unknown_team' }),
+    );
+    expect(new SaveRepository(storage).load()).toBeNull();
+
+    storage.setItem(
+      'blue-hole-quest:save',
+      JSON.stringify({ ...save, resources: null }),
+    );
+    expect(new SaveRepository(storage).load()).toBeNull();
+  });
+
   it('preserves current and maximum resources', () => {
     const repository = new SaveRepository(new MemoryStorage());
     const save = createNewSave('dad_paula');

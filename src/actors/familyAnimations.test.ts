@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { packOpaquePoses, proportionalFrameBounds, removeSmallOpaqueComponents } from './familyAnimations';
+import {
+  packOpaquePoses,
+  proportionalFrameBounds,
+  removeSmallOpaqueComponents,
+} from './familyAnimations';
 
 describe('illustrated sprite cleanup', () => {
   it('removes isolated fragments while preserving the connected character', () => {
     const width = 40;
     const height = 40;
     const pixels = new Uint8ClampedArray(width * height * 4);
-    const paint = (x: number, y: number) => { pixels[(y * width + x) * 4 + 3] = 255; };
-    for (let y = 5; y < 25; y += 1)
-      for (let x = 4; x < 19; x += 1) paint(x, y);
+    const paint = (x: number, y: number) => {
+      pixels[(y * width + x) * 4 + 3] = 255;
+    };
+    for (let y = 5; y < 25; y += 1) for (let x = 4; x < 19; x += 1) paint(x, y);
     paint(1, 1);
 
     removeSmallOpaqueComponents(pixels, width, height, 1);
@@ -23,7 +28,13 @@ describe('illustrated sprite cleanup', () => {
     );
 
     expect(bounds[7]!.x + bounds[7]!.width).toBe(2103);
-    expect(bounds.slice(1).every((frame, index) => frame.x === bounds[index]!.x + bounds[index]!.width)).toBe(true);
+    expect(
+      bounds
+        .slice(1)
+        .every(
+          (frame, index) => frame.x === bounds[index]!.x + bounds[index]!.width,
+        ),
+    ).toBe(true);
     expect(bounds.map((frame) => frame.width)).toContain(263);
   });
 
@@ -31,7 +42,9 @@ describe('illustrated sprite cleanup', () => {
     const width = 20;
     const height = 6;
     const pixels = new Uint8ClampedArray(width * height * 4);
-    const paint = (x: number, y: number) => { pixels[(y * width + x) * 4 + 3] = 255; };
+    const paint = (x: number, y: number) => {
+      pixels[(y * width + x) * 4 + 3] = 255;
+    };
     for (let x = 1; x <= 7; x += 1) paint(x, 1);
     for (let x = 6; x <= 17; x += 1) paint(x, 4);
 
@@ -39,7 +52,10 @@ describe('illustrated sprite cleanup', () => {
     const cellWidth = packed.width / 2;
 
     expect(cellWidth).toBe(24);
-    expect(Array.from(packed.pixels).filter((_, index) => index % 4 === 3 && (packed.pixels[index] ?? 0) > 0)).toHaveLength(19);
+    expect(
+      Array.from(packed.pixels).filter(
+        (_, index) => index % 4 === 3 && (packed.pixels[index] ?? 0) > 0,
+      ),
+    ).toHaveLength(19);
   });
 });
-

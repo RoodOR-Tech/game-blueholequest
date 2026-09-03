@@ -16,7 +16,12 @@ import {
   pendingHomecomingArtifact,
 } from '../game/progression/bossLocations';
 import { recoveredRelicCount, RELIC_IDS } from '../game/progression/relics';
-import { BUDDA_ENCOUNTERS, buddaFlag, discoverBudda, foundBuddaCount } from '../game/progression/budda';
+import {
+  BUDDA_ENCOUNTERS,
+  buddaFlag,
+  discoverBudda,
+  foundBuddaCount,
+} from '../game/progression/budda';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
@@ -84,7 +89,11 @@ export class BlueHoleHubScene extends Phaser.Scene {
     }
     this.homecomingArtifact = pendingHomecomingArtifact(this.save);
     this.save = this.homecomingArtifact
-      ? celebrateHomecoming(this.save, this.homecomingArtifact, new Date().toISOString())
+      ? celebrateHomecoming(
+          this.save,
+          this.homecomingArtifact,
+          new Date().toISOString(),
+        )
       : saveAtCheckpoint(this.save, CHECKPOINTS.home, new Date().toISOString());
     this.repository.save(this.save);
 
@@ -126,7 +135,10 @@ export class BlueHoleHubScene extends Phaser.Scene {
     );
     if (horizontal !== 0) this.player.setFlipX(horizontal < 0);
     const visual = playerVisual(this.save.activeTeamId);
-    this.player.play(direction.lengthSq() > 0 ? visual.walk : visual.idle, true);
+    this.player.play(
+      direction.lengthSq() > 0 ? visual.walk : visual.idle,
+      true,
+    );
 
     const fixture = this.nearestFixture();
     this.prompt?.setVisible(Boolean(fixture));
@@ -198,10 +210,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
       visual.texture,
       visual.frame,
     );
-    player
-      .setScale(visual.scale)
-      .setCollideWorldBounds(true)
-      .play(visual.idle);
+    player.setScale(visual.scale).setCollideWorldBounds(true).play(visual.idle);
     configurePlayerBody(player, this.save.activeTeamId);
     this.player = player;
   }
@@ -237,9 +246,10 @@ export class BlueHoleHubScene extends Phaser.Scene {
   }
 
   private nearestFixture(): HubFixture | undefined {
-    if (!this.player) return undefined;
+    if (!this.player || !this.save) return undefined;
     return FIXTURES.find(
       (fixture) =>
+        (fixture.id !== 'budda' || !this.save!.flags[buddaFlag('rockaway')]) &&
         Phaser.Math.Distance.Between(
           this.player!.x,
           this.player!.y,
@@ -286,7 +296,11 @@ export class BlueHoleHubScene extends Phaser.Scene {
       return;
     }
     if (id === 'budda') {
-      this.save = discoverBudda(this.save, 'rockaway', new Date().toISOString());
+      this.save = discoverBudda(
+        this.save,
+        'rockaway',
+        new Date().toISOString(),
+      );
       this.repository.save(this.save);
       const count = foundBuddaCount(this.save);
       this.message.setText(
@@ -339,7 +353,8 @@ export class BlueHoleHubScene extends Phaser.Scene {
     }
     gameAudio.play('artifact');
     this.cameras.main.flash(420, 255, 218, 112, false);
-    const allRecovered = recoveredRelicCount(this.save!.relics) === RELIC_IDS.length;
+    const allRecovered =
+      recoveredRelicCount(this.save!.relics) === RELIC_IDS.length;
     this.message.setText(
       `WELCOME HOME, HERO!\n${this.homecomingArtifact.artifactName} NOW RESTS ON THE MANTEL.\nTHE FAMILY CHEERS • HEALTH & MAGIC RESTORED${
         allRecovered
@@ -350,24 +365,48 @@ export class BlueHoleHubScene extends Phaser.Scene {
   }
 
   private createPostGameMenu(): void {
-    this.add.rectangle(128, 148, 224, 134, 0x08111d, 0.96).setStrokeStyle(3, 0xf6d77a);
-    this.add.text(128, 96, 'THE QUEST IS COMPLETE', {
-      color: '#73ddff', fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold',
-    }).setOrigin(0.5);
-    this.add.text(128, 112, `FINAL SCORE • ${this.save?.stats.score ?? 0}`, {
-      color: '#ffffff', fontFamily: 'monospace', fontSize: '7px',
-    }).setOrigin(0.5);
-    this.postGameOptions = ['SEE HIGH SCORES', 'START NEW GAME'].map((label, index) =>
-      this.add.text(128, 145 + index * 30, label, {
-        align: 'center', fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', padding: { x: 12, y: 6 },
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-        this.postGameIndex = index;
-        this.activatePostGameOption();
-      }),
+    this.add
+      .rectangle(128, 148, 224, 134, 0x08111d, 0.96)
+      .setStrokeStyle(3, 0xf6d77a);
+    this.add
+      .text(128, 96, 'THE QUEST IS COMPLETE', {
+        color: '#73ddff',
+        fontFamily: 'monospace',
+        fontSize: '11px',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(128, 112, `FINAL SCORE • ${this.save?.stats.score ?? 0}`, {
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        fontSize: '7px',
+      })
+      .setOrigin(0.5);
+    this.postGameOptions = ['SEE HIGH SCORES', 'START NEW GAME'].map(
+      (label, index) =>
+        this.add
+          .text(128, 145 + index * 30, label, {
+            align: 'center',
+            fontFamily: 'monospace',
+            fontSize: '9px',
+            fontStyle: 'bold',
+            padding: { x: 12, y: 6 },
+          })
+          .setOrigin(0.5)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            this.postGameIndex = index;
+            this.activatePostGameOption();
+          }),
     );
-    this.add.text(128, 207, 'UP / DOWN • A / ENTER: CHOOSE', {
-      color: '#bfeaff', fontFamily: 'monospace', fontSize: '6px',
-    }).setOrigin(0.5);
+    this.add
+      .text(128, 207, 'UP / DOWN • A / ENTER: CHOOSE', {
+        color: '#bfeaff',
+        fontFamily: 'monospace',
+        fontSize: '6px',
+      })
+      .setOrigin(0.5);
     this.refreshPostGameMenu();
   }
 
@@ -384,21 +423,31 @@ export class BlueHoleHubScene extends Phaser.Scene {
       }
       return;
     }
-    if (this.controls.actions.get('up').pressed || this.controls.actions.get('down').pressed) {
+    if (
+      this.controls.actions.get('up').pressed ||
+      this.controls.actions.get('down').pressed
+    ) {
       this.postGameIndex = this.postGameIndex === 0 ? 1 : 0;
       gameAudio.play('select');
       this.refreshPostGameMenu();
     }
-    if (this.controls.actions.get('confirm').pressed || this.controls.actions.get('jump').pressed)
+    if (
+      this.controls.actions.get('confirm').pressed ||
+      this.controls.actions.get('jump').pressed
+    )
       this.activatePostGameOption();
   }
 
   private refreshPostGameMenu(): void {
     this.postGameOptions.forEach((option, index) =>
       option
-        .setText(`${index === this.postGameIndex ? '▶ ' : ''}${option.text.replace(/^▶ /, '')}`)
+        .setText(
+          `${index === this.postGameIndex ? '▶ ' : ''}${option.text.replace(/^▶ /, '')}`,
+        )
         .setColor(index === this.postGameIndex ? '#f6d77a' : '#ffffff')
-        .setBackgroundColor(index === this.postGameIndex ? '#173f57' : '#0d202c'),
+        .setBackgroundColor(
+          index === this.postGameIndex ? '#173f57' : '#0d202c',
+        ),
     );
   }
 
@@ -411,15 +460,25 @@ export class BlueHoleHubScene extends Phaser.Scene {
     }
     const scores = this.highScores.list();
     const lines = scores.length
-      ? scores.slice(0, 10).map((entry, index) =>
-          `${index + 1}. ${getTeam(entry.teamId).displayName.toUpperCase()}  ${entry.score}`,
-        )
+      ? scores
+          .slice(0, 10)
+          .map(
+            (entry, index) =>
+              `${index + 1}. ${getTeam(entry.teamId).displayName.toUpperCase()}  ${entry.score}`,
+          )
       : ['NO COMPLETED QUESTS RECORDED'];
-    this.highScorePanel = this.add.text(128, 147, `HIGH SCORES\n\n${lines.join('\n')}\n\nA / B: BACK`, {
-      align: 'center', backgroundColor: '#07111c', color: '#f6d77a', fontFamily: 'monospace', fontSize: '7px', lineSpacing: 3,
-      padding: { x: 14, y: 10 },
-    }).setOrigin(0.5).setDepth(600);
+    this.highScorePanel = this.add
+      .text(128, 147, `HIGH SCORES\n\n${lines.join('\n')}\n\nA / B: BACK`, {
+        align: 'center',
+        backgroundColor: '#07111c',
+        color: '#f6d77a',
+        fontFamily: 'monospace',
+        fontSize: '7px',
+        lineSpacing: 3,
+        padding: { x: 14, y: 10 },
+      })
+      .setOrigin(0.5)
+      .setDepth(600);
     sharpenSceneText(this);
   }
 }
-

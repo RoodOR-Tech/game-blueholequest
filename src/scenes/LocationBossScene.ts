@@ -43,6 +43,7 @@ export class LocationBossScene extends Phaser.Scene {
   private nextBossAttackAt = 800;
   private invulnerableUntil = 0;
   private encounterOver = false;
+  private bossDefeated = false;
   private knockedOut = false;
   private gameOver = false;
   private readonly repository = new SaveRepository(window.localStorage);
@@ -156,7 +157,7 @@ export class LocationBossScene extends Phaser.Scene {
     if (time >= this.nextBossAttackAt && this.boss?.active)
       this.bossAttack(time);
     this.updateProjectiles(time);
-    if (this.controls.actions.get('cancel').pressed)
+    if (!this.bossDefeated && this.controls.actions.get('cancel').pressed)
       this.scene.start('highway-26');
   }
 
@@ -168,6 +169,7 @@ export class LocationBossScene extends Phaser.Scene {
     this.nextBossAttackAt = 800;
     this.invulnerableUntil = 0;
     this.encounterOver = false;
+    this.bossDefeated = false;
     this.knockedOut = false;
     this.gameOver = false;
   }
@@ -207,9 +209,10 @@ export class LocationBossScene extends Phaser.Scene {
     this.boss.setTintFill(0xffffff);
     this.time.delayedCall(90, () => this.boss?.clearTint());
     if (result.defeated) this.defeatBoss();
-    else this.message?.setText(
-      `${this.location.bossName} • ${result.health.current}/${result.health.maximum}`,
-    );
+    else
+      this.message?.setText(
+        `${this.location.bossName} • ${result.health.current}/${result.health.maximum}`,
+      );
     this.refreshHud();
   }
 
@@ -252,7 +255,11 @@ export class LocationBossScene extends Phaser.Scene {
     if (!this.player || !this.boss) return;
     const targets = [
       Phaser.Math.Clamp(this.player.x, 28, 228),
-      Phaser.Math.Clamp(this.player.x + (Math.random() < 0.5 ? -52 : 52), 28, 228),
+      Phaser.Math.Clamp(
+        this.player.x + (Math.random() < 0.5 ? -52 : 52),
+        28,
+        228,
+      ),
     ];
     targets.forEach((x) => {
       const warning = this.add
@@ -283,7 +290,14 @@ export class LocationBossScene extends Phaser.Scene {
     [174, 205].forEach((y, index) => {
       this.time.delayedCall(index * 260, () => {
         if (!this.boss?.active) return;
-        this.spawnBossProjectile('boss-wave', this.boss.x - 22, y, -92, 0, 'wave');
+        this.spawnBossProjectile(
+          'boss-wave',
+          this.boss.x - 22,
+          y,
+          -92,
+          0,
+          'wave',
+        );
       });
     });
     this.boss.x = Phaser.Math.Clamp(this.boss.x - 12, 164, 220);
@@ -298,10 +312,14 @@ export class LocationBossScene extends Phaser.Scene {
       Phaser.Math.Clamp(this.player.x + 48, 28, 228),
     ];
     targets.forEach((x, index) => {
-      const warning = this.add.circle(x, 205, 10, 0xf0c86a, 0.3).setStrokeStyle(2, 0xffe8a0);
+      const warning = this.add
+        .circle(x, 205, 10, 0xf0c86a, 0.3)
+        .setStrokeStyle(2, 0xffe8a0);
       this.time.delayedCall(460 + index * 90, () => {
         warning.destroy();
-        const root = this.add.rectangle(x, 186, 12, 48, 0x5e8b3e).setStrokeStyle(2, 0x283b20);
+        const root = this.add
+          .rectangle(x, 186, 12, 48, 0x5e8b3e)
+          .setStrokeStyle(2, 0x283b20);
         if (
           this.player &&
           Math.abs(this.player.x - x) < 13 &&
@@ -324,7 +342,9 @@ export class LocationBossScene extends Phaser.Scene {
       Phaser.Math.Between(35, 220),
     ];
     targets.forEach((x, index) => {
-      const warning = this.add.circle(x, 205, 9, 0xffc05c, 0.28).setStrokeStyle(2, 0xff6a3d);
+      const warning = this.add
+        .circle(x, 205, 9, 0xffc05c, 0.28)
+        .setStrokeStyle(2, 0xff6a3d);
       this.time.delayedCall(320 + index * 130, () => {
         warning.destroy();
         this.spawnBossProjectile('boss-meteor', x, 76, 0, 112, 'meteor');
@@ -429,6 +449,7 @@ export class LocationBossScene extends Phaser.Scene {
   private defeatBoss(): void {
     gameAudio.play('clear');
     if (!this.boss) return;
+    this.bossDefeated = true;
     const x = this.boss.x;
     const y = this.boss.y;
     this.boss.destroy();
@@ -474,7 +495,9 @@ export class LocationBossScene extends Phaser.Scene {
       this.location,
       new Date().toISOString(),
     );
-    const bossIndex = BOSS_LOCATIONS.findIndex((location) => location.id === this.location.id);
+    const bossIndex = BOSS_LOCATIONS.findIndex(
+      (location) => location.id === this.location.id,
+    );
     this.save = addScore(
       this.save,
       SCORE_VALUES.bossBase + Math.max(0, bossIndex) * SCORE_VALUES.bossStep,
@@ -530,22 +553,48 @@ export class LocationBossScene extends Phaser.Scene {
     g.fillStyle(this.location.bossColor, 0.72).fillRect(0, 70, 256, 170);
     if (this.location.id === 'hillsboro_west') {
       g.fillStyle(0x27313a).fillRect(0, 174, 256, 66);
-      for (let x = 8; x < 256; x += 32) g.fillStyle(0xf0a23b, 0.65).fillRect(x, 183, 18, 4);
+      for (let x = 8; x < 256; x += 32)
+        g.fillStyle(0xf0a23b, 0.65).fillRect(x, 183, 18, 4);
       g.lineStyle(4, 0x4a555d).lineBetween(0, 102, 256, 102);
     } else if (this.location.id === 'hillsboro_east') {
-      g.fillGradientStyle(0x14213d, 0x14213d, 0x315a78, 0x315a78).fillRect(0, 70, 256, 170);
-      for (let x = 24; x < 256; x += 46) g.lineStyle(2, 0x7ce8ff, 0.45).lineBetween(x, 75, x + 18, 225);
+      g.fillGradientStyle(0x14213d, 0x14213d, 0x315a78, 0x315a78).fillRect(
+        0,
+        70,
+        256,
+        170,
+      );
+      for (let x = 24; x < 256; x += 46)
+        g.lineStyle(2, 0x7ce8ff, 0.45).lineBetween(x, 75, x + 18, 225);
     } else if (this.location.id === 'milwaukie') {
       g.fillStyle(0x1d5967).fillRect(0, 166, 256, 74);
-      g.lineStyle(2, 0xa8f1f3, 0.4).lineBetween(0, 182, 256, 174).lineBetween(0, 207, 256, 196);
-      for (let x = 15; x < 256; x += 45) g.fillStyle(0x334b4f).fillRect(x, 145, 8, 45);
+      g.lineStyle(2, 0xa8f1f3, 0.4)
+        .lineBetween(0, 182, 256, 174)
+        .lineBetween(0, 207, 256, 196);
+      for (let x = 15; x < 256; x += 45)
+        g.fillStyle(0x334b4f).fillRect(x, 145, 8, 45);
     } else if (this.location.id === 'walla_walla') {
-      g.fillGradientStyle(0x59472f, 0x59472f, 0xb68439, 0xb68439).fillRect(0, 70, 256, 170);
-      for (let x = 5; x < 256; x += 17) g.lineStyle(2, 0xe3c45c, 0.55).lineBetween(x, 235, x + 20, 149);
+      g.fillGradientStyle(0x59472f, 0x59472f, 0xb68439, 0xb68439).fillRect(
+        0,
+        70,
+        256,
+        170,
+      );
+      for (let x = 5; x < 256; x += 17)
+        g.lineStyle(2, 0xe3c45c, 0.55).lineBetween(x, 235, x + 20, 149);
     } else {
-      g.fillGradientStyle(0x271d29, 0x271d29, 0x5c2928, 0x5c2928).fillRect(0, 70, 256, 170);
-      g.fillStyle(0x17151a).fillTriangle(0, 190, 52, 93, 104, 190).fillTriangle(126, 190, 191, 84, 256, 190);
-      g.lineStyle(3, 0xff6037, 0.75).lineBetween(0, 221, 88, 202).lineBetween(88, 202, 166, 225).lineBetween(166, 225, 256, 199);
+      g.fillGradientStyle(0x271d29, 0x271d29, 0x5c2928, 0x5c2928).fillRect(
+        0,
+        70,
+        256,
+        170,
+      );
+      g.fillStyle(0x17151a)
+        .fillTriangle(0, 190, 52, 93, 104, 190)
+        .fillTriangle(126, 190, 191, 84, 256, 190);
+      g.lineStyle(3, 0xff6037, 0.75)
+        .lineBetween(0, 221, 88, 202)
+        .lineBetween(88, 202, 166, 225)
+        .lineBetween(166, 225, 256, 199);
     }
     g.lineStyle(1, this.location.color, 0.42);
     for (let x = 0; x < 256; x += 24) g.lineBetween(x, 70, x, 240);
@@ -582,38 +631,78 @@ export class LocationBossScene extends Phaser.Scene {
     if (!this.textures.exists('location-boss-sprite')) {
       const boss = this.add.graphics();
       if (this.location.id === 'hillsboro_west') {
-        boss.fillStyle(this.location.bossColor).fillRoundedRect(8, 8, 38, 43, 7);
+        boss
+          .fillStyle(this.location.bossColor)
+          .fillRoundedRect(8, 8, 38, 43, 7);
         boss.lineStyle(3, 0x17151d).strokeRoundedRect(8, 8, 38, 43, 7);
-        boss.fillStyle(this.location.color).fillCircle(20, 23, 4).fillCircle(34, 23, 4);
+        boss
+          .fillStyle(this.location.color)
+          .fillCircle(20, 23, 4)
+          .fillCircle(34, 23, 4);
         boss.fillStyle(0x17151d).fillRect(3, 25, 7, 20).fillRect(44, 25, 7, 20);
         boss.fillStyle(0x4c382f).fillRect(14, 49, 9, 8).fillRect(32, 49, 9, 8);
         boss.fillStyle(0xf0b84c).fillRect(15, 12, 25, 5);
-        boss.lineStyle(2, 0xd9e4e8).strokeCircle(27, 36, 7).lineBetween(27, 29, 27, 43).lineBetween(20, 36, 34, 36);
+        boss
+          .lineStyle(2, 0xd9e4e8)
+          .strokeCircle(27, 36, 7)
+          .lineBetween(27, 29, 27, 43)
+          .lineBetween(20, 36, 34, 36);
       } else if (this.location.id === 'hillsboro_east') {
         boss.fillStyle(0x253a62).fillTriangle(27, 2, 48, 25, 39, 52);
         boss.fillTriangle(27, 2, 6, 25, 15, 52);
         boss.lineStyle(3, 0x10192d).strokeTriangle(27, 2, 48, 25, 39, 52);
         boss.strokeTriangle(27, 2, 6, 25, 15, 52);
         boss.fillStyle(0x72e4ff).fillCircle(20, 23, 5).fillCircle(34, 23, 5);
-        boss.lineStyle(2, 0xffe369).lineBetween(27, 2, 27, 0).lineBetween(8, 40, 0, 48).lineBetween(46, 40, 54, 48);
-        boss.lineStyle(2, 0x7ce8ff).strokeCircle(27, 31, 11).lineBetween(27, 20, 35, 31).lineBetween(35, 31, 27, 42);
+        boss
+          .lineStyle(2, 0xffe369)
+          .lineBetween(27, 2, 27, 0)
+          .lineBetween(8, 40, 0, 48)
+          .lineBetween(46, 40, 54, 48);
+        boss
+          .lineStyle(2, 0x7ce8ff)
+          .strokeCircle(27, 31, 11)
+          .lineBetween(27, 20, 35, 31)
+          .lineBetween(35, 31, 27, 42);
       } else if (this.location.id === 'milwaukie') {
         boss.fillStyle(0x276f82).fillEllipse(27, 30, 50, 43);
         boss.lineStyle(3, 0x123e4b).strokeEllipse(27, 30, 50, 43);
         boss.fillStyle(0x9feaff).fillCircle(18, 24, 5).fillCircle(36, 24, 5);
         boss.fillStyle(0x164d5c).fillEllipse(27, 40, 20, 9);
-        boss.lineStyle(4, 0x4bc7db).lineBetween(5, 28, 0, 15).lineBetween(49, 28, 54, 15);
-        boss.fillStyle(0x5be0ee).fillTriangle(11, 50, 20, 42, 21, 57).fillTriangle(43, 50, 34, 42, 33, 57);
+        boss
+          .lineStyle(4, 0x4bc7db)
+          .lineBetween(5, 28, 0, 15)
+          .lineBetween(49, 28, 54, 15);
+        boss
+          .fillStyle(0x5be0ee)
+          .fillTriangle(11, 50, 20, 42, 21, 57)
+          .fillTriangle(43, 50, 34, 42, 33, 57);
         boss.lineStyle(2, 0xd0fbff).strokeEllipse(27, 30, 36, 29);
-        boss.fillStyle(0x9feaff, 0.7).fillCircle(5, 16, 3).fillCircle(49, 16, 3);
+        boss
+          .fillStyle(0x9feaff, 0.7)
+          .fillCircle(5, 16, 3)
+          .fillCircle(49, 16, 3);
       } else if (this.location.id === 'walla_walla') {
         boss.fillStyle(0x5b3c2d).fillRect(19, 13, 18, 43);
         boss.lineStyle(3, 0x2d211c).strokeRect(19, 13, 18, 43);
-        boss.fillStyle(0x477737).fillCircle(15, 17, 13).fillCircle(39, 17, 13).fillCircle(27, 8, 15);
+        boss
+          .fillStyle(0x477737)
+          .fillCircle(15, 17, 13)
+          .fillCircle(39, 17, 13)
+          .fillCircle(27, 8, 15);
         boss.fillStyle(0xf2ca55).fillCircle(21, 23, 4).fillCircle(34, 23, 4);
-        boss.lineStyle(5, 0x477737).lineBetween(20, 31, 5, 44).lineBetween(35, 31, 50, 44);
-        boss.lineStyle(3, 0x6e9b45).lineBetween(23, 54, 14, 60).lineBetween(33, 54, 42, 60);
-        boss.fillStyle(0x7e3f78).fillCircle(12, 12, 4).fillCircle(43, 13, 4).fillCircle(27, 3, 4);
+        boss
+          .lineStyle(5, 0x477737)
+          .lineBetween(20, 31, 5, 44)
+          .lineBetween(35, 31, 50, 44);
+        boss
+          .lineStyle(3, 0x6e9b45)
+          .lineBetween(23, 54, 14, 60)
+          .lineBetween(33, 54, 42, 60);
+        boss
+          .fillStyle(0x7e3f78)
+          .fillCircle(12, 12, 4)
+          .fillCircle(43, 13, 4)
+          .fillCircle(27, 3, 4);
         boss.lineStyle(2, 0xc99954).strokeCircle(27, 35, 8);
       } else {
         boss.fillStyle(0x3d3034).fillTriangle(27, 1, 52, 20, 46, 55);
@@ -621,9 +710,19 @@ export class LocationBossScene extends Phaser.Scene {
         boss.lineStyle(4, 0x171315).strokeTriangle(27, 1, 52, 20, 46, 55);
         boss.strokeTriangle(27, 1, 2, 20, 8, 55);
         boss.fillStyle(0xff5b35).fillCircle(19, 24, 6).fillCircle(36, 24, 6);
-        boss.lineStyle(4, 0xff713b).lineBetween(27, 8, 25, 47).lineBetween(9, 35, 20, 40).lineBetween(45, 35, 34, 40);
-        boss.fillStyle(0xffa13d).fillTriangle(8, 12, 0, 0, 18, 8).fillTriangle(46, 12, 54, 0, 36, 8);
-        boss.fillStyle(0xffc35a).fillTriangle(27, 15, 33, 34, 27, 30).fillTriangle(27, 15, 21, 34, 27, 30);
+        boss
+          .lineStyle(4, 0xff713b)
+          .lineBetween(27, 8, 25, 47)
+          .lineBetween(9, 35, 20, 40)
+          .lineBetween(45, 35, 34, 40);
+        boss
+          .fillStyle(0xffa13d)
+          .fillTriangle(8, 12, 0, 0, 18, 8)
+          .fillTriangle(46, 12, 54, 0, 36, 8);
+        boss
+          .fillStyle(0xffc35a)
+          .fillTriangle(27, 15, 33, 34, 27, 30)
+          .fillTriangle(27, 15, 21, 34, 27, 30);
         boss.lineStyle(2, 0xff8750).strokeCircle(27, 42, 8);
       }
       boss.generateTexture('location-boss-sprite', 55, 61).destroy();
@@ -636,10 +735,14 @@ export class LocationBossScene extends Phaser.Scene {
     }
     if (!this.textures.exists('boss-wave')) {
       const wave = this.add.graphics();
-      wave.fillStyle(0x3dc4df, 0.88)
+      wave
+        .fillStyle(0x3dc4df, 0.88)
         .fillTriangle(0, 14, 12, 1, 20, 14)
         .fillTriangle(14, 14, 28, 3, 38, 14);
-      wave.lineStyle(2, 0xb9f5ff).lineBetween(0, 14, 12, 1).lineBetween(12, 1, 20, 14);
+      wave
+        .lineStyle(2, 0xb9f5ff)
+        .lineBetween(0, 14, 12, 1)
+        .lineBetween(12, 1, 20, 14);
       wave.generateTexture('boss-wave', 38, 15).destroy();
     }
     if (!this.textures.exists('boss-meteor')) {
@@ -654,7 +757,10 @@ export class LocationBossScene extends Phaser.Scene {
       if (this.location.id === 'hillsboro_west') {
         artifact.fillStyle(0x7de4ff).fillTriangle(10, 1, 18, 10, 15, 21);
         artifact.fillTriangle(10, 1, 2, 10, 5, 21);
-        artifact.fillStyle(0x31536a).fillRect(5, 15, 4, 7).fillRect(13, 15, 4, 7);
+        artifact
+          .fillStyle(0x31536a)
+          .fillRect(5, 15, 4, 7)
+          .fillRect(13, 15, 4, 7);
         artifact.fillStyle(0xffffff).fillCircle(7, 9, 2).fillCircle(13, 9, 2);
       } else if (this.location.id === 'hillsboro_east') {
         artifact.fillStyle(0xf2c84b).fillRoundedRect(7, 2, 7, 21, 3);
@@ -679,4 +785,3 @@ export class LocationBossScene extends Phaser.Scene {
     }
   }
 }
-

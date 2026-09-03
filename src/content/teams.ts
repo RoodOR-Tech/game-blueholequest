@@ -70,3 +70,7 @@ export function getTeam(id: TeamId): TeamDefinition {
   if (!team) throw new Error(`Unknown team: ${id}`);
   return team;
 }
+
+export function isTeamId(value: unknown): value is TeamId {
+  return typeof value === 'string' && TEAMS.some((team) => team.id === value);
+}

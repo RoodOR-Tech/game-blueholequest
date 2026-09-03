@@ -78,7 +78,9 @@ export function bossLocationById(id: unknown): BossLocation {
   );
 }
 
-export function bossLocationForCheckpoint(checkpointId: string): BossLocation | null {
+export function bossLocationForCheckpoint(
+  checkpointId: string,
+): BossLocation | null {
   return (
     BOSS_LOCATIONS.find((location) => location.checkpointId === checkpointId) ??
     null
@@ -93,9 +95,7 @@ export function awardLocationArtifact(
   const firstRecovery = !save.relics.includes(location.artifactId);
   return {
     ...save,
-    relics: firstRecovery
-      ? [...save.relics, location.artifactId]
-      : save.relics,
+    relics: firstRecovery ? [...save.relics, location.artifactId] : save.relics,
     stats: {
       ...save.stats,
       experience: save.stats.experience + (firstRecovery ? 100 : 0),
@@ -119,7 +119,9 @@ export function isLocationUnlocked(
   return previous ? recovered.includes(previous.artifactId) : false;
 }
 
-export function pendingHomecomingArtifact(save: SaveData): BossLocation | undefined {
+export function pendingHomecomingArtifact(
+  save: SaveData,
+): BossLocation | undefined {
   return [...BOSS_LOCATIONS]
     .reverse()
     .find(
@@ -149,4 +151,3 @@ export function celebrateHomecoming(
     savedAt,
   };
 }
-

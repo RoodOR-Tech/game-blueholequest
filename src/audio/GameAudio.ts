@@ -1,10 +1,22 @@
 import Phaser from 'phaser';
 
 export type AudioTheme = 'title' | 'route' | 'boss' | 'victory';
-export type SoundEffect = 'select' | 'confirm' | 'jump' | 'attack' | 'hit' | 'calamity' | 'clear' | 'artifact' | 'firework';
+export type SoundEffect =
+  | 'select'
+  | 'confirm'
+  | 'jump'
+  | 'attack'
+  | 'hit'
+  | 'calamity'
+  | 'clear'
+  | 'artifact'
+  | 'firework';
 
 const NOTE = (semitones: number): number => 220 * 2 ** (semitones / 12);
-const THEMES: Record<AudioTheme, { notes: number[]; beat: number; wave: OscillatorType }> = {
+const THEMES: Record<
+  AudioTheme,
+  { notes: number[]; beat: number; wave: OscillatorType }
+> = {
   title: { notes: [0, 7, 12, 7, 3, 10, 12, 10], beat: 360, wave: 'triangle' },
   route: { notes: [0, 3, 7, 10, 7, 3, 5, 7], beat: 260, wave: 'square' },
   boss: { notes: [0, 0, 1, 7, 0, 10, 8, 1], beat: 175, wave: 'sawtooth' },
@@ -30,24 +42,58 @@ class GameAudioController {
     );
   }
 
-  isMuted(): boolean { return this.muted; }
+  isMuted(): boolean {
+    return this.muted;
+  }
 
   play(effect: SoundEffect): void {
     if (!this.context || !this.master || this.muted) return;
-    const patterns: Record<SoundEffect, Array<[number, number, OscillatorType]>> = {
+    const patterns: Record<
+      SoundEffect,
+      Array<[number, number, OscillatorType]>
+    > = {
       select: [[7, 0.045, 'square']],
-      confirm: [[12, 0.06, 'square'], [19, 0.09, 'square']],
-      jump: [[0, 0.05, 'square'], [7, 0.08, 'square']],
-      attack: [[12, 0.04, 'sawtooth'], [5, 0.07, 'square']],
+      confirm: [
+        [12, 0.06, 'square'],
+        [19, 0.09, 'square'],
+      ],
+      jump: [
+        [0, 0.05, 'square'],
+        [7, 0.08, 'square'],
+      ],
+      attack: [
+        [12, 0.04, 'sawtooth'],
+        [5, 0.07, 'square'],
+      ],
       hit: [[-8, 0.12, 'sawtooth']],
-      calamity: [[-12, 0.16, 'sawtooth'], [-17, 0.2, 'square']],
-      clear: [[0, 0.06, 'square'], [4, 0.06, 'square'], [7, 0.13, 'square']],
-      artifact: [[0, 0.07, 'triangle'], [7, 0.07, 'triangle'], [12, 0.18, 'triangle']],
-      firework: [[19, 0.06, 'square'], [12, 0.16, 'sawtooth']],
+      calamity: [
+        [-12, 0.16, 'sawtooth'],
+        [-17, 0.2, 'square'],
+      ],
+      clear: [
+        [0, 0.06, 'square'],
+        [4, 0.06, 'square'],
+        [7, 0.13, 'square'],
+      ],
+      artifact: [
+        [0, 0.07, 'triangle'],
+        [7, 0.07, 'triangle'],
+        [12, 0.18, 'triangle'],
+      ],
+      firework: [
+        [19, 0.06, 'square'],
+        [12, 0.16, 'sawtooth'],
+      ],
     };
     let offset = 0;
     patterns[effect].forEach(([note, duration, wave]) => {
-      this.tone(NOTE(note), duration, wave, this.context!.currentTime + offset, 0.13);
+      this.tone(
+        NOTE(note),
+        duration,
+        wave,
+        this.context!.currentTime + offset,
+        0.13,
+      );
       offset += duration * 0.65;
     });
   }
@@ -77,16 +123,34 @@ class GameAudioController {
     const playBeat = () => {
       if (!this.context || this.muted) return;
       const note = theme.notes[this.step % theme.notes.length]!;
-      this.tone(NOTE(note - 12), theme.beat / 900, theme.wave, this.context.currentTime, 0.045);
+      this.tone(
+        NOTE(note - 12),
+        theme.beat / 900,
+        theme.wave,
+        this.context.currentTime,
+        0.045,
+      );
       if (this.step % 2 === 0)
-        this.tone(NOTE(note + 7), theme.beat / 1400, 'triangle', this.context.currentTime, 0.025);
+        this.tone(
+          NOTE(note + 7),
+          theme.beat / 1400,
+          'triangle',
+          this.context.currentTime,
+          0.025,
+        );
       this.step += 1;
     };
     playBeat();
     this.timer = window.setInterval(playBeat, theme.beat);
   }
 
-  private tone(frequency: number, duration: number, wave: OscillatorType, start: number, volume: number): void {
+  private tone(
+    frequency: number,
+    duration: number,
+    wave: OscillatorType,
+    start: number,
+    volume: number,
+  ): void {
     if (!this.context || !this.master) return;
     const oscillator = this.context.createOscillator();
     const gain = this.context.createGain();
@@ -107,4 +171,3 @@ class GameAudioController {
 }
 
 export const gameAudio = new GameAudioController();
-

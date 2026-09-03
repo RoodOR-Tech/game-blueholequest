@@ -7,7 +7,9 @@ export interface LocationArrival {
   readonly progress: string;
 }
 
-export const LOCATION_ARRIVALS: Readonly<Record<BossLocationId, LocationArrival>> = {
+export const LOCATION_ARRIVALS: Readonly<
+  Record<BossLocationId, LocationArrival>
+> = {
   hillsboro_west: {
     locationId: 'hillsboro_west',
     title: 'ENTERING HILLSBORO WEST',

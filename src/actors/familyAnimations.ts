@@ -4,15 +4,35 @@ import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from './dadAnimations';
 
 type IllustratedTeamId = Exclude<TeamId, 'dad_paula'>;
 
-const SHEETS: Readonly<Record<IllustratedTeamId, { key: string; path: string; scale: number }>> = {
-  jen_omar: { key: 'jen-sprites-v1', path: 'assets/sprites/jen-sprites-v1.png', scale: 0.16 },
-  joe_cia: { key: 'joe-sprites-v1', path: 'assets/sprites/joe-sprites-v1.png', scale: 0.16 },
-  kris_lea: { key: 'kris-sprites-v1', path: 'assets/sprites/kris-sprites-v1.png', scale: 0.16 },
-  jason_hilary: { key: 'jason-sprites-v1', path: 'assets/sprites/jason-sprites-v1.png', scale: 0.16 },
+const SHEETS: Readonly<
+  Record<IllustratedTeamId, { key: string; path: string; scale: number }>
+> = {
+  jen_omar: {
+    key: 'jen-sprites-v1',
+    path: 'assets/sprites/jen-sprites-v1.png',
+    scale: 0.16,
+  },
+  joe_cia: {
+    key: 'joe-sprites-v1',
+    path: 'assets/sprites/joe-sprites-v1.png',
+    scale: 0.16,
+  },
+  kris_lea: {
+    key: 'kris-sprites-v1',
+    path: 'assets/sprites/kris-sprites-v1.png',
+    scale: 0.16,
+  },
+  jason_hilary: {
+    key: 'jason-sprites-v1',
+    path: 'assets/sprites/jason-sprites-v1.png',
+    scale: 0.16,
+  },
 };
 
 export function preloadFamilySprites(scene: Phaser.Scene): void {
-  Object.values(SHEETS).forEach((sheet) => scene.load.image(sheet.key, sheet.path));
+  Object.values(SHEETS).forEach((sheet) =>
+    scene.load.image(sheet.key, sheet.path),
+  );
 }
 
 export function registerFamilyAnimations(scene: Phaser.Scene): void {
@@ -20,15 +40,39 @@ export function registerFamilyAnimations(scene: Phaser.Scene): void {
     const sheet = SHEETS[teamId];
     const texture = cleanConnectedBackground(scene, sheet.key);
     const image = texture.getSourceImage() as HTMLCanvasElement;
-    const frames = Array.from({ length: 8 }, (_, index) => `${teamId}-frame-${index}`);
+    const frames = Array.from(
+      { length: 8 },
+      (_, index) => `${teamId}-frame-${index}`,
+    );
     frames.forEach((frame, index) => {
       const bounds = proportionalFrameBounds(image.width, 8, index);
       if (!texture.has(frame))
         texture.add(frame, 0, bounds.x, 0, bounds.width, image.height);
     });
-    createAnimation(scene, `${teamId}-idle`, sheet.key, frames.slice(0, 2), 2, -1);
-    createAnimation(scene, `${teamId}-walk`, sheet.key, frames.slice(2, 5), 7, -1);
-    createAnimation(scene, `${teamId}-attack`, sheet.key, frames.slice(6, 8), 10, 0);
+    createAnimation(
+      scene,
+      `${teamId}-idle`,
+      sheet.key,
+      frames.slice(0, 2),
+      2,
+      -1,
+    );
+    createAnimation(
+      scene,
+      `${teamId}-walk`,
+      sheet.key,
+      frames.slice(2, 5),
+      7,
+      -1,
+    );
+    createAnimation(
+      scene,
+      `${teamId}-attack`,
+      sheet.key,
+      frames.slice(6, 8),
+      10,
+      0,
+    );
   });
 }
 
@@ -37,7 +81,9 @@ export function cleanConnectedBackground(
   sourceKey: string,
   frameCount = 8,
 ): Phaser.Textures.Texture {
-  const source = scene.textures.get(sourceKey).getSourceImage() as HTMLImageElement;
+  const source = scene.textures
+    .get(sourceKey)
+    .getSourceImage() as HTMLImageElement;
   const cleanKey = `${sourceKey}-clean`;
   if (scene.textures.exists(cleanKey)) return scene.textures.get(cleanKey);
   const workCanvas = document.createElement('canvas');
@@ -82,10 +128,22 @@ export function cleanConnectedBackground(
     if (y > 0) enqueue(x, y - 1);
     if (y + 1 < source.height) enqueue(x, y + 1);
   }
-  const packed = packOpaquePoses(pixels.data, source.width, source.height, frameCount);
-  const canvasTexture = scene.textures.createCanvas(cleanKey, packed.width, source.height);
+  const packed = packOpaquePoses(
+    pixels.data,
+    source.width,
+    source.height,
+    frameCount,
+  );
+  const canvasTexture = scene.textures.createCanvas(
+    cleanKey,
+    packed.width,
+    source.height,
+  );
   if (!canvasTexture) return scene.textures.get(sourceKey);
-  const packedImage = canvasTexture.context.createImageData(packed.width, source.height);
+  const packedImage = canvasTexture.context.createImageData(
+    packed.width,
+    source.height,
+  );
   packedImage.data.set(packed.pixels);
   canvasTexture.context.putImageData(packedImage, 0, 0);
   canvasTexture.refresh();
@@ -116,7 +174,8 @@ export function packOpaquePoses(
           if (offsetX === 0 && offsetY === 0) continue;
           const nextX = x + offsetX;
           const nextY = y + offsetY;
-          if (nextX < 0 || nextX >= width || nextY < 0 || nextY >= height) continue;
+          if (nextX < 0 || nextX >= width || nextY < 0 || nextY >= height)
+            continue;
           const next = nextY * width + nextX;
           if (visited[next]) continue;
           visited[next] = 1;
@@ -136,16 +195,19 @@ export function packOpaquePoses(
     }))
     .sort((a, b) => a.minimumX - b.minimumX);
   if (poses.length !== frameCount) return { pixels, width };
-  const cellWidth = Math.max(...poses.map((pose) => pose.maximumX - pose.minimumX + 1)) + 12;
+  const cellWidth =
+    Math.max(...poses.map((pose) => pose.maximumX - pose.minimumX + 1)) + 12;
   const packedWidth = cellWidth * frameCount;
   const packed = new Uint8ClampedArray(packedWidth * height * 4);
   poses.forEach((pose, frame) => {
     const poseWidth = pose.maximumX - pose.minimumX + 1;
-    const destinationX = frame * cellWidth + Math.floor((cellWidth - poseWidth) / 2);
+    const destinationX =
+      frame * cellWidth + Math.floor((cellWidth - poseWidth) / 2);
     pose.component.forEach((position) => {
       const sourceX = position % width;
       const y = Math.floor(position / width);
-      const destination = (y * packedWidth + destinationX + sourceX - pose.minimumX) * 4;
+      const destination =
+        (y * packedWidth + destinationX + sourceX - pose.minimumX) * 4;
       const sourceOffset = position * 4;
       packed.set(pixels.subarray(sourceOffset, sourceOffset + 4), destination);
     });
@@ -171,7 +233,10 @@ export function removeSmallOpaqueComponents(
   frameCount: number,
 ): void {
   const averageFrameWidth = width / frameCount;
-  const minimumComponentPixels = Math.max(240, Math.floor(averageFrameWidth * height * 0.0015));
+  const minimumComponentPixels = Math.max(
+    240,
+    Math.floor(averageFrameWidth * height * 0.0015),
+  );
   for (let frame = 0; frame < frameCount; frame += 1) {
     const bounds = proportionalFrameBounds(width, frameCount, frame);
     const startX = bounds.x;
@@ -194,17 +259,26 @@ export function removeSmallOpaqueComponents(
               if (offsetX === 0 && offsetY === 0) continue;
               const nextX = currentX + offsetX;
               const nextY = currentY + offsetY;
-              if (nextX < startX || nextX >= endX || nextY < 0 || nextY >= height) continue;
+              if (
+                nextX < startX ||
+                nextX >= endX ||
+                nextY < 0 ||
+                nextY >= height
+              )
+                continue;
               const nextLocal = nextY * (endX - startX) + nextX - startX;
               if (visited[nextLocal]) continue;
               visited[nextLocal] = 1;
               const nextPosition = nextY * width + nextX;
-              if (pixels[nextPosition * 4 + 3] !== 0) pending.push(nextPosition);
+              if (pixels[nextPosition * 4 + 3] !== 0)
+                pending.push(nextPosition);
             }
           }
         }
         if (component.length < minimumComponentPixels)
-          component.forEach((position) => { pixels[position * 4 + 3] = 0; });
+          component.forEach((position) => {
+            pixels[position * 4 + 3] = 0;
+          });
       }
     }
   }
@@ -262,4 +336,3 @@ export function configurePlayerBody(
       .setSize(teamId === 'jason_hilary' ? 190 : 165, 420)
       .setOffset(teamId === 'jason_hilary' ? 35 : 48, 180);
 }
-

@@ -10,11 +10,17 @@ export const SCORE_VALUES = {
   bossStep: 500,
 } as const;
 
-export function addScore(save: SaveData, points: number, savedAt: string): SaveData {
+export function addScore(
+  save: SaveData,
+  points: number,
+  savedAt: string,
+): SaveData {
   return {
     ...save,
-    stats: { ...save.stats, score: save.stats.score + Math.max(0, Math.floor(points)) },
+    stats: {
+      ...save.stats,
+      score: save.stats.score + Math.max(0, Math.floor(points)),
+    },
     savedAt,
   };
 }
-

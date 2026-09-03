@@ -151,11 +151,20 @@ export class TitleScene extends Phaser.Scene {
     const scores = this.highScores.list().slice(0, 3);
     if (scores.length === 0) return;
     const lines = scores.map(
-      (entry, index) => `${index + 1}. ${getTeam(entry.teamId).displayName.toUpperCase()}  ${entry.score}`,
+      (entry, index) =>
+        `${index + 1}. ${getTeam(entry.teamId).displayName.toUpperCase()}  ${entry.score}`,
     );
-    this.add.text(249, 84, `HIGH SCORES\n${lines.join('\n')}`, {
-      align: 'right', backgroundColor: '#08111d', color: '#f6d77a', fontFamily: 'monospace', fontSize: '6px', lineSpacing: 2, padding: { x: 4, y: 3 },
-    }).setOrigin(1, 0);
+    this.add
+      .text(249, 84, `HIGH SCORES\n${lines.join('\n')}`, {
+        align: 'right',
+        backgroundColor: '#08111d',
+        color: '#f6d77a',
+        fontFamily: 'monospace',
+        fontSize: '6px',
+        lineSpacing: 2,
+        padding: { x: 4, y: 3 },
+      })
+      .setOrigin(1, 0);
   }
 
   private drawBackdrop(): void {
@@ -169,7 +178,11 @@ export class TitleScene extends Phaser.Scene {
     for (let index = 0; index < 23; index += 1)
       graphics
         .fillStyle(index % 4 === 0 ? 0xf6d77a : 0xcfe9f4, 0.75)
-        .fillCircle(8 + ((index * 37) % 240), 8 + ((index * 19) % 65), index % 5 === 0 ? 1.3 : 0.7);
+        .fillCircle(
+          8 + ((index * 37) % 240),
+          8 + ((index * 19) % 65),
+          index % 5 === 0 ? 1.3 : 0.7,
+        );
 
     graphics.fillStyle(0x274a58).fillTriangle(-15, 148, 47, 72, 112, 148);
     graphics.fillStyle(0x355c67).fillTriangle(56, 148, 132, 53, 207, 148);
@@ -181,7 +194,12 @@ export class TitleScene extends Phaser.Scene {
     graphics.lineStyle(2, 0x8de1ee, 0.52);
     for (let y = 130; y < 168; y += 9)
       for (let x = (y % 18) - 18; x < 256; x += 32)
-        graphics.beginPath().moveTo(x, y).lineTo(x + 10, y - 2).lineTo(x + 21, y).strokePath();
+        graphics
+          .beginPath()
+          .moveTo(x, y)
+          .lineTo(x + 10, y - 2)
+          .lineTo(x + 21, y)
+          .strokePath();
 
     graphics.fillStyle(COLORS.sand).fillRect(0, 171, 256, 69);
     graphics.fillStyle(0xb98c4d).fillEllipse(128, 181, 176, 29);
@@ -196,8 +214,14 @@ export class TitleScene extends Phaser.Scene {
     graphics.fillStyle(0x40271f).fillRect(139, 101, 9, 20);
     graphics.fillStyle(0xc98c58).fillRect(117, 143, 22, 29);
     graphics.fillStyle(0x2b1d19).fillRect(120, 146, 16, 26);
-    graphics.fillStyle(0xffcb62, 0.9).fillRect(100, 137, 12, 12).fillRect(146, 137, 11, 12);
-    graphics.lineStyle(2, 0x35231d).strokeRect(100, 137, 12, 12).strokeRect(146, 137, 11, 12);
+    graphics
+      .fillStyle(0xffcb62, 0.9)
+      .fillRect(100, 137, 12, 12)
+      .fillRect(146, 137, 11, 12);
+    graphics
+      .lineStyle(2, 0x35231d)
+      .strokeRect(100, 137, 12, 12)
+      .strokeRect(146, 137, 11, 12);
     graphics.lineBetween(106, 137, 106, 149).lineBetween(100, 143, 112, 143);
     graphics.lineBetween(151, 137, 151, 149).lineBetween(146, 143, 157, 143);
     graphics.fillStyle(0xd8c18b).fillRoundedRect(103, 116, 50, 12, 2);
@@ -211,13 +235,22 @@ export class TitleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     graphics.fillStyle(0x5c3929).fillRect(110, 172, 36, 3);
-    graphics.lineStyle(2, 0xc9a15e).lineBetween(124, 174, 117, 185).lineBetween(132, 174, 139, 185);
+    graphics
+      .lineStyle(2, 0xc9a15e)
+      .lineBetween(124, 174, 117, 185)
+      .lineBetween(132, 174, 139, 185);
 
     // Dark Coast Range trees frame the logo without obscuring the menu.
     for (let x = -8; x < 55; x += 15)
-      graphics.fillStyle(0x102e28).fillTriangle(x, 178, x + 10, 103 + (x % 4) * 6, x + 21, 178).fillRect(x + 8, 153, 4, 28);
+      graphics
+        .fillStyle(0x102e28)
+        .fillTriangle(x, 178, x + 10, 103 + (x % 4) * 6, x + 21, 178)
+        .fillRect(x + 8, 153, 4, 28);
     for (let x = 211; x < 270; x += 15)
-      graphics.fillStyle(0x102e28).fillTriangle(x, 178, x + 10, 110 + (x % 3) * 7, x + 21, 178).fillRect(x + 8, 154, 4, 26);
+      graphics
+        .fillStyle(0x102e28)
+        .fillTriangle(x, 178, x + 10, 110 + (x % 3) * 7, x + 21, 178)
+        .fillRect(x + 8, 154, 4, 26);
 
     // Warm route lanterns lead toward the water.
     [76, 180].forEach((x) => {
@@ -227,11 +260,19 @@ export class TitleScene extends Phaser.Scene {
     });
 
     const windowGlow = this.add.rectangle(128, 158, 12, 17, 0xffd474, 0.12);
-    this.tweens.add({ targets: windowGlow, alpha: 0.32, duration: 1200, yoyo: true, repeat: -1 });
+    this.tweens.add({
+      targets: windowGlow,
+      alpha: 0.32,
+      duration: 1200,
+      yoyo: true,
+      repeat: -1,
+    });
 
     graphics.fillStyle(COLORS.panel, 0.96).fillRoundedRect(15, 14, 226, 66, 6);
     graphics.lineStyle(3, 0x173f57).strokeRoundedRect(15, 14, 226, 66, 6);
-    graphics.lineStyle(1, COLORS.frame, 0.9).strokeRoundedRect(19, 18, 218, 58, 4);
+    graphics
+      .lineStyle(1, COLORS.frame, 0.9)
+      .strokeRoundedRect(19, 18, 218, 58, 4);
     this.add
       .text(128, 29, 'THE BLUE HOLE', {
         color: '#73ddff',
@@ -263,4 +304,3 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
   }
 }
-

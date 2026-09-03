@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
 import { gameAudio } from '../audio/GameAudio';
 import { PhaserInput } from '../game/input/PhaserInput';
-import { BOSS_LOCATIONS, isLocationUnlocked } from '../game/progression/bossLocations';
+import {
+  BOSS_LOCATIONS,
+  isLocationUnlocked,
+} from '../game/progression/bossLocations';
 import {
   LOCATION_ROUTES,
   resolveRouteChoice,
@@ -245,7 +248,7 @@ export class Highway26Scene extends Phaser.Scene {
             fontFamily: 'monospace',
             fontSize: '6px',
             lineSpacing: 2,
-          padding: { x: 5, y: 4 },
+            padding: { x: 5, y: 4 },
           },
         )
         .setOrigin(0.5),
@@ -277,7 +280,9 @@ export class Highway26Scene extends Phaser.Scene {
   }
 
   private resolveEvent(): void {
-    gameAudio.play(this.activeEvent?.kind === 'calamity' ? 'calamity' : 'confirm');
+    gameAudio.play(
+      this.activeEvent?.kind === 'calamity' ? 'calamity' : 'confirm',
+    );
     const route = LOCATION_ROUTES[this.routeIndex];
     const event = this.activeEvent;
     const choice = event?.choices[this.choiceIndex];
@@ -344,39 +349,93 @@ export class Highway26Scene extends Phaser.Scene {
     choiceLabel: string,
     summary: string,
     before: { life: number; magic: number; lives: number; score: number },
-    after: { life: number; magic: number; lives: number; scoreGained: number; lostLife: boolean },
+    after: {
+      life: number;
+      magic: number;
+      lives: number;
+      scoreGained: number;
+      lostLife: boolean;
+    },
   ): void {
-    const shade = this.add.rectangle(128, 125, 240, 176, 0x07111c, 0.98)
+    const shade = this.add
+      .rectangle(128, 125, 240, 176, 0x07111c, 0.98)
       .setStrokeStyle(3, after.lostLife ? 0xff6655 : 0xf6d77a);
-    const heading = this.add.text(128, 48, 'CALAMITY CONSEQUENCES', {
-      color: after.lostLife ? '#ff8d79' : '#f6d77a', fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold',
-    }).setOrigin(0.5);
-    const title = this.add.text(128, 69, `${eventTitle}\nYOU CHOSE: ${choiceLabel}`, {
-      align: 'center', color: '#ffffff', fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold', lineSpacing: 2,
-    }).setOrigin(0.5);
-    const consequences = this.add.text(128, 122, [
-      `HEALTH     ${before.life} → ${after.life}`,
-      `MAGIC      ${before.magic} → ${after.magic}`,
-      `LIVES      ${before.lives} → ${after.lives}`,
-      `SCORE      +${after.scoreGained}`,
-      after.lostLife ? '! A LIFE WAS LOST !' : 'NO LIFE LOST',
-    ].join('\n'), {
-      align: 'left', backgroundColor: '#10283a', color: after.lostLife ? '#ffb09f' : '#c9f2d2',
-      fontFamily: 'monospace', fontSize: '8px', lineSpacing: 3, padding: { x: 10, y: 7 },
-    }).setOrigin(0.5);
-    const result = this.add.text(128, 174, summary.toUpperCase(), {
-      align: 'center', color: '#d7e6eb', fontFamily: 'monospace', fontSize: '6px', wordWrap: { width: 210 },
-    }).setOrigin(0.5);
-    const continueText = this.add.text(
-      128,
-      200,
-      after.lives === 0 ? 'A / ENTER • RECOVER HOME' : 'A / ENTER • CONTINUE',
-      {
-        backgroundColor: '#17415b', color: '#f6d77a', fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold', padding: { x: 8, y: 5 },
-      },
-    ).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const heading = this.add
+      .text(128, 48, 'CALAMITY CONSEQUENCES', {
+        color: after.lostLife ? '#ff8d79' : '#f6d77a',
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    const title = this.add
+      .text(128, 69, `${eventTitle}\nYOU CHOSE: ${choiceLabel}`, {
+        align: 'center',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        fontSize: '7px',
+        fontStyle: 'bold',
+        lineSpacing: 2,
+      })
+      .setOrigin(0.5);
+    const consequences = this.add
+      .text(
+        128,
+        122,
+        [
+          `HEALTH     ${before.life} → ${after.life}`,
+          `MAGIC      ${before.magic} → ${after.magic}`,
+          `LIVES      ${before.lives} → ${after.lives}`,
+          `SCORE      +${after.scoreGained}`,
+          after.lostLife ? '! A LIFE WAS LOST !' : 'NO LIFE LOST',
+        ].join('\n'),
+        {
+          align: 'left',
+          backgroundColor: '#10283a',
+          color: after.lostLife ? '#ffb09f' : '#c9f2d2',
+          fontFamily: 'monospace',
+          fontSize: '8px',
+          lineSpacing: 3,
+          padding: { x: 10, y: 7 },
+        },
+      )
+      .setOrigin(0.5);
+    const result = this.add
+      .text(128, 174, summary.toUpperCase(), {
+        align: 'center',
+        color: '#d7e6eb',
+        fontFamily: 'monospace',
+        fontSize: '6px',
+        wordWrap: { width: 210 },
+      })
+      .setOrigin(0.5);
+    const continueText = this.add
+      .text(
+        128,
+        200,
+        after.lives === 0 ? 'A / ENTER • RECOVER HOME' : 'A / ENTER • CONTINUE',
+        {
+          backgroundColor: '#17415b',
+          color: '#f6d77a',
+          fontFamily: 'monospace',
+          fontSize: '7px',
+          fontStyle: 'bold',
+          padding: { x: 8, y: 5 },
+        },
+      )
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
     continueText.on('pointerdown', () => this.dismissOutcome());
-    this.outcomePanel = this.add.container(0, 0, [shade, heading, title, consequences, result, continueText]).setDepth(250);
+    this.outcomePanel = this.add
+      .container(0, 0, [
+        shade,
+        heading,
+        title,
+        consequences,
+        result,
+        continueText,
+      ])
+      .setDepth(250);
   }
 
   private updateOutcome(): void {
@@ -384,7 +443,8 @@ export class Highway26Scene extends Phaser.Scene {
     if (
       this.controls.actions.get('confirm').pressed ||
       this.controls.actions.get('jump').pressed
-    ) this.dismissOutcome();
+    )
+      this.dismissOutcome();
   }
 
   private dismissOutcome(): void {
@@ -402,17 +462,16 @@ export class Highway26Scene extends Phaser.Scene {
       const selected = index === this.choiceIndex;
       const event = this.activeEvent;
       const choice = event?.choices[index];
-      const stakes = event?.kind === 'calamity'
-        ? index === 0
-          ? `-2 HP / LIFE RISK • +${SCORE_VALUES.calamityRisk} SCORE`
-          : `-1 MAGIC • +${SCORE_VALUES.calamityCareful} SCORE`
-        : `+${index === 0 ? 150 : 100} SCORE`;
+      const stakes =
+        event?.kind === 'calamity'
+          ? index === 0
+            ? `-2 HP / LIFE RISK • +${SCORE_VALUES.calamityRisk} SCORE`
+            : `-1 MAGIC • +${SCORE_VALUES.calamityCareful} SCORE`
+          : `+${index === 0 ? 150 : 100} SCORE`;
       text
         .setColor(selected ? '#f6d77a' : '#ffffff')
         .setBackgroundColor(selected ? '#27485d' : '')
-        .setText(
-          `${selected ? '▶ ' : ''}${choice?.label ?? ''}\n${stakes}`,
-        );
+        .setText(`${selected ? '▶ ' : ''}${choice?.label ?? ''}\n${stakes}`);
     });
   }
 
@@ -512,7 +571,7 @@ export class Highway26Scene extends Phaser.Scene {
         index === 0 ||
         Boolean(
           BOSS_LOCATIONS[index - 1] &&
-            this.save?.relics.includes(BOSS_LOCATIONS[index - 1]!.artifactId),
+          this.save?.relics.includes(BOSS_LOCATIONS[index - 1]!.artifactId),
         );
       const current = index === this.routeIndex + 1;
       g.fillStyle(completed ? 0xf6d77a : 0x17374c).fillCircle(
@@ -521,23 +580,21 @@ export class Highway26Scene extends Phaser.Scene {
         current ? 7 : 5,
       );
       const label = this.add
-          .text(point.labelX, point.labelY, point.label, {
-            align: 'center',
-            backgroundColor: '#08111dcc',
-            color: '#ffffff',
-            fontFamily: 'monospace',
-            fontSize: '4px',
-            padding: { x: 2, y: 1 },
-          })
-          .setOrigin(0.5);
+        .text(point.labelX, point.labelY, point.label, {
+          align: 'center',
+          backgroundColor: '#08111dcc',
+          color: '#ffffff',
+          fontFamily: 'monospace',
+          fontSize: '4px',
+          padding: { x: 2, y: 1 },
+        })
+        .setOrigin(0.5);
       if (index > 0 && isLocationUnlocked(index - 1, this.save?.relics ?? []))
-        label
-          .setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => {
-            this.routeIndex = index - 1;
-            gameAudio.play('select');
-            this.drawRouteMenu();
-          });
+        label.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+          this.routeIndex = index - 1;
+          gameAudio.play('select');
+          this.drawRouteMenu();
+        });
       this.labels.push(label);
     });
     this.labels.push(
@@ -575,20 +632,15 @@ export class Highway26Scene extends Phaser.Scene {
       .setStrokeStyle(1, 0x08111d);
     if (route) {
       this.departButton = this.add
-        .text(
-          128,
-          198,
-          `START ${route.label.replace(' ROUTE', '')} ROUTE`,
-          {
-            align: 'center',
-            backgroundColor: '#173f57ee',
-            color: '#f6d77a',
-            fontFamily: 'monospace',
-            fontSize: '6px',
-            fontStyle: 'bold',
-            padding: { x: 7, y: 4 },
-          },
-        )
+        .text(128, 198, `START ${route.label.replace(' ROUTE', '')} ROUTE`, {
+          align: 'center',
+          backgroundColor: '#173f57ee',
+          color: '#f6d77a',
+          fontFamily: 'monospace',
+          fontSize: '6px',
+          fontStyle: 'bold',
+          padding: { x: 7, y: 4 },
+        })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.beginJourney());
@@ -600,7 +652,9 @@ export class Highway26Scene extends Phaser.Scene {
     const route = LOCATION_ROUTES[this.routeIndex];
     if (!route || !this.save) return;
     if (!isLocationUnlocked(this.routeIndex, this.save.relics)) {
-      this.message?.setText('THAT ROUTE IS STILL LOCKED • COMPLETE THE PREVIOUS LOCATION');
+      this.message?.setText(
+        'THAT ROUTE IS STILL LOCKED • COMPLETE THE PREVIOUS LOCATION',
+      );
       return;
     }
     if (!this.save.flags[locationArrivalFlag(route.locationId)]) {
@@ -639,8 +693,9 @@ export class Highway26Scene extends Phaser.Scene {
       const resolved =
         event !== undefined &&
         Boolean(this.save?.flags[routeEventFlag(route.locationId, event.id)]);
-      g.fillStyle(index === 4 ? 0x8f3e38 : resolved ? 0xf6d77a : 0x17374c)
-        .fillCircle(x, this.nodeY(index), index === 4 ? 7 : 5);
+      g.fillStyle(
+        index === 4 ? 0x8f3e38 : resolved ? 0xf6d77a : 0x17374c,
+      ).fillCircle(x, this.nodeY(index), index === 4 ? 7 : 5);
     });
     this.marker = this.add
       .circle(NODE_X[0], this.nodeY(0), 4, 0xffffff)
@@ -686,4 +741,3 @@ export class Highway26Scene extends Phaser.Scene {
     return 148 - index * 16;
   }
 }
-

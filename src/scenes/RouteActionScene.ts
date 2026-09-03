@@ -9,9 +9,21 @@ import {
 import { configurePlayerBody, playerVisual } from '../actors/familyAnimations';
 import { applyDamage, type HealthState } from '../game/combat/damage';
 import { PhaserInput } from '../game/input/PhaserInput';
-import { bossLocationById, type BossLocationId } from '../game/progression/bossLocations';
-import { routeEventFlag, routeForLocation } from '../game/progression/locationRoutes';
-import { BUDDA_ACHIEVEMENT, BUDDA_ENCOUNTERS, buddaFlag, discoverBudda, foundBuddaCount } from '../game/progression/budda';
+import {
+  bossLocationById,
+  type BossLocationId,
+} from '../game/progression/bossLocations';
+import {
+  routeEventFlag,
+  routeForLocation,
+} from '../game/progression/locationRoutes';
+import {
+  BUDDA_ACHIEVEMENT,
+  BUDDA_ENCOUNTERS,
+  buddaFlag,
+  discoverBudda,
+  foundBuddaCount,
+} from '../game/progression/budda';
 import {
   routeActionFor,
   type RouteActionDefinition,
@@ -40,9 +52,21 @@ const MAGIC_BLESSINGS: readonly {
   title: string;
   description: string;
 }[] = [
-  { id: 'full_heal', title: 'FULL HEAL', description: 'RESTORE ALL HP ONCE WHEN CRITICAL' },
-  { id: 'buckshot', title: '3-SHOT BUCKSHOT', description: 'FIRE THREE SHORT-RANGE MAGIC BOLTS' },
-  { id: 'super_jump', title: 'SUPER JUMP', description: 'JUMP HIGHER FOR THIS WHOLE MISSION' },
+  {
+    id: 'full_heal',
+    title: 'FULL HEAL',
+    description: 'RESTORE ALL HP ONCE WHEN CRITICAL',
+  },
+  {
+    id: 'buckshot',
+    title: '3-SHOT BUCKSHOT',
+    description: 'FIRE THREE SHORT-RANGE MAGIC BOLTS',
+  },
+  {
+    id: 'super_jump',
+    title: 'SUPER JUMP',
+    description: 'JUMP HIGHER FOR THIS WHOLE MISSION',
+  },
 ];
 
 export class RouteActionScene extends Phaser.Scene {
@@ -127,22 +151,29 @@ export class RouteActionScene extends Phaser.Scene {
     );
     this.createAdvancedTraversal();
     this.definition.enemyXs.forEach((x) => this.spawnEnemy(x, 198, false));
-    this.definition.flyingEnemyXs.forEach((x) =>
-      this.spawnEnemy(x, 145, true),
-    );
+    this.definition.flyingEnemyXs.forEach((x) => this.spawnEnemy(x, 145, true));
     this.createEnvironmentMechanic();
     {
-      const preferredX = { hillsboro_west: 118, hillsboro_east: 202, milwaukie: 282, walla_walla: 366, bend: 444 }[this.locationId];
+      const preferredX = {
+        hillsboro_west: 118,
+        hillsboro_east: 202,
+        milwaukie: 282,
+        walla_walla: 366,
+        bend: 444,
+      }[this.locationId];
       const occupied = [
         ...this.definition.obstacleXs,
         ...this.definition.enemyXs,
         ...this.definition.flyingEnemyXs,
       ];
-      const candidates = Array.from({ length: 40 }, (_, index) => 65 + index * 10)
-        .sort((a, b) => Math.abs(a - preferredX) - Math.abs(b - preferredX));
-      const x = candidates.find((candidate) =>
-        occupied.every((other) => Math.abs(candidate - other) > 44),
-      ) ?? 75;
+      const candidates = Array.from(
+        { length: 40 },
+        (_, index) => 65 + index * 10,
+      ).sort((a, b) => Math.abs(a - preferredX) - Math.abs(b - preferredX));
+      const x =
+        candidates.find((candidate) =>
+          occupied.every((other) => Math.abs(candidate - other) > 44),
+        ) ?? 75;
       this.budda = this.add
         .sprite(x, 202, BUDDA_TEXTURE_KEY, buddaFrame(this.locationId))
         .setScale(BUDDA_SPRITE_SCALE)
@@ -155,11 +186,11 @@ export class RouteActionScene extends Phaser.Scene {
             ? 'BUDDA • A / B / ENTER: VISIT'
             : 'BUDDA • A / B / ENTER: TALK',
           {
-          backgroundColor: '#08111df2',
-          color: '#f6d77a',
-          fontFamily: 'monospace',
-          fontSize: '6px',
-          padding: { x: 5, y: 3 },
+            backgroundColor: '#08111df2',
+            color: '#f6d77a',
+            fontFamily: 'monospace',
+            fontSize: '6px',
+            padding: { x: 5, y: 3 },
           },
         )
         .setOrigin(0.5)
@@ -230,7 +261,14 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private updateBudda(): void {
-    if (!this.budda || !this.player || !this.save || !this.message || !this.controls) return;
+    if (
+      !this.budda ||
+      !this.player ||
+      !this.save ||
+      !this.message ||
+      !this.controls
+    )
+      return;
     const nearby =
       Math.abs(this.player.x - this.budda.x) <= 34 &&
       Math.abs(this.player.y - this.budda.y) <= 52;
@@ -242,10 +280,18 @@ export class RouteActionScene extends Phaser.Scene {
       this.controls.actions.get('attack').pressed;
     if (!interactPressed) return;
     const before = foundBuddaCount(this.save);
-    this.save = discoverBudda(this.save, this.locationId, new Date().toISOString());
+    this.save = discoverBudda(
+      this.save,
+      this.locationId,
+      new Date().toISOString(),
+    );
     const firstMeeting = foundBuddaCount(this.save) > before;
     if (firstMeeting) {
-      this.save = addScore(this.save, SCORE_VALUES.budda, new Date().toISOString());
+      this.save = addScore(
+        this.save,
+        SCORE_VALUES.budda,
+        new Date().toISOString(),
+      );
       this.repository.save(this.save);
     }
     const encounter = BUDDA_ENCOUNTERS[this.locationId];
@@ -292,32 +338,53 @@ export class RouteActionScene extends Phaser.Scene {
       return;
     }
     this.choosingMagic = true;
-    const shade = this.add.rectangle(128, 126, 242, 172, 0x07111c, 0.97).setStrokeStyle(2, 0x75d9ff);
-    const title = this.add.text(128, 53, 'CHOOSE MAGIC • COST 1 MP', {
-      color: '#f6d77a', fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
-    }).setOrigin(0.5);
-    const hint = this.add.text(128, 194, 'UP / DOWN • A / B / ENTER: CHOOSE', {
-      color: '#bfeaff', fontFamily: 'monospace', fontSize: '6px',
-    }).setOrigin(0.5);
+    const shade = this.add
+      .rectangle(128, 126, 242, 172, 0x07111c, 0.97)
+      .setStrokeStyle(2, 0x75d9ff);
+    const title = this.add
+      .text(128, 53, 'CHOOSE MAGIC • COST 1 MP', {
+        color: '#f6d77a',
+        fontFamily: 'monospace',
+        fontSize: '9px',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    const hint = this.add
+      .text(128, 194, 'UP / DOWN • A / B / ENTER: CHOOSE', {
+        color: '#bfeaff',
+        fontFamily: 'monospace',
+        fontSize: '6px',
+      })
+      .setOrigin(0.5);
     this.magicChoiceTexts = MAGIC_BLESSINGS.map((_, index) =>
-      this.add.text(128, 84 + index * 34, '', {
-        align: 'center', fontFamily: 'monospace', fontSize: '7px', lineSpacing: 2,
-        padding: { x: 7, y: 4 },
-      }).setOrigin(0.5),
+      this.add
+        .text(128, 84 + index * 34, '', {
+          align: 'center',
+          fontFamily: 'monospace',
+          fontSize: '7px',
+          lineSpacing: 2,
+          padding: { x: 7, y: 4 },
+        })
+        .setOrigin(0.5),
     );
-    this.magicChoicePanel = this.add.container(0, 0, [shade, title, hint, ...this.magicChoiceTexts]).setDepth(500);
+    this.magicChoicePanel = this.add
+      .container(0, 0, [shade, title, hint, ...this.magicChoiceTexts])
+      .setDepth(500);
     this.refreshMagicChoice();
   }
 
   private updateMagicChoice(): void {
     if (!this.controls) return;
     if (this.controls.actions.get('up').pressed) {
-      this.magicChoiceIndex = (this.magicChoiceIndex + MAGIC_BLESSINGS.length - 1) % MAGIC_BLESSINGS.length;
+      this.magicChoiceIndex =
+        (this.magicChoiceIndex + MAGIC_BLESSINGS.length - 1) %
+        MAGIC_BLESSINGS.length;
       gameAudio.play('select');
       this.refreshMagicChoice();
     }
     if (this.controls.actions.get('down').pressed) {
-      this.magicChoiceIndex = (this.magicChoiceIndex + 1) % MAGIC_BLESSINGS.length;
+      this.magicChoiceIndex =
+        (this.magicChoiceIndex + 1) % MAGIC_BLESSINGS.length;
       gameAudio.play('select');
       this.refreshMagicChoice();
     }
@@ -334,7 +401,9 @@ export class RouteActionScene extends Phaser.Scene {
       const blessing = MAGIC_BLESSINGS[index]!;
       const selected = index === this.magicChoiceIndex;
       text
-        .setText(`${selected ? '▶ ' : ''}${blessing.title}\n${blessing.description}`)
+        .setText(
+          `${selected ? '▶ ' : ''}${blessing.title}\n${blessing.description}`,
+        )
         .setColor(selected ? '#ffe58a' : '#d6e3e8')
         .setBackgroundColor(selected ? '#17415b' : '#0b202e');
     });
@@ -346,7 +415,10 @@ export class RouteActionScene extends Phaser.Scene {
     this.blessing = choice.id;
     this.save = {
       ...this.save,
-      resources: { ...this.save.resources, magic: Math.max(0, this.save.resources.magic - 1) },
+      resources: {
+        ...this.save.resources,
+        magic: Math.max(0, this.save.resources.magic - 1),
+      },
       savedAt: new Date().toISOString(),
     };
     this.repository.save(this.save);
@@ -366,21 +438,48 @@ export class RouteActionScene extends Phaser.Scene {
     const width = 22 + (index % 2) * 9;
     const height = 13 + (index % 3) * 5;
     const obstacle = this.add
-      .rectangle(x, 218 - height / 2, width, height, this.definition.accentColor)
+      .rectangle(
+        x,
+        218 - height / 2,
+        width,
+        height,
+        this.definition.accentColor,
+      )
       .setStrokeStyle(2, 0x241c19);
     if (this.locationId === 'hillsboro_west') {
-      this.add.circle(x - 5, 218 - height, 7, 0x4c2548).setStrokeStyle(2, 0xb45b9c);
-      this.add.line(0, 0, x - 13, 218, x + 12, 199 - height / 2, 0x6f345f, 1).setOrigin(0, 0);
+      this.add
+        .circle(x - 5, 218 - height, 7, 0x4c2548)
+        .setStrokeStyle(2, 0xb45b9c);
+      this.add
+        .line(0, 0, x - 13, 218, x + 12, 199 - height / 2, 0x6f345f, 1)
+        .setOrigin(0, 0);
     } else if (this.locationId === 'hillsboro_east') {
-      this.add.rectangle(x, 212 - height, width - 5, 4, 0x485765).setStrokeStyle(1, 0xd5e1e6);
+      this.add
+        .rectangle(x, 212 - height, width - 5, 4, 0x485765)
+        .setStrokeStyle(1, 0xd5e1e6);
       this.add.circle(x - 7, 214 - height, 2, 0xffe36a).setDepth(2);
       this.add.circle(x + 7, 214 - height, 2, 0x71e6ff).setDepth(2);
     } else if (this.locationId === 'milwaukie') {
-      this.add.ellipse(x, 216 - height, width + 5, 8, 0x315f67).setStrokeStyle(2, 0x8bd6df);
-      this.add.line(0, 0, x - 10, 211 - height, x + 10, 217 - height, 0xc9f4ef, 1).setOrigin(0, 0);
+      this.add
+        .ellipse(x, 216 - height, width + 5, 8, 0x315f67)
+        .setStrokeStyle(2, 0x8bd6df);
+      this.add
+        .line(0, 0, x - 10, 211 - height, x + 10, 217 - height, 0xc9f4ef, 1)
+        .setOrigin(0, 0);
     } else if (this.locationId === 'walla_walla') {
       for (let stalk = -8; stalk <= 8; stalk += 4)
-        this.add.line(0, 0, x + stalk, 218, x + stalk + 2, 195 - height / 2, 0xf2d469, 1).setOrigin(0, 0);
+        this.add
+          .line(
+            0,
+            0,
+            x + stalk,
+            218,
+            x + stalk + 2,
+            195 - height / 2,
+            0xf2d469,
+            1,
+          )
+          .setOrigin(0, 0);
     }
     this.physics.add.existing(obstacle, true);
     this.physics.add.collider(this.player!, obstacle);
@@ -402,19 +501,30 @@ export class RouteActionScene extends Phaser.Scene {
     for (let index = 0; index < 28; index += 1) {
       const x = (index * 71) % 512;
       const y = 72 + ((index * 37) % 128);
-      const particle = this.locationId === 'hillsboro_east'
-        ? this.add.line(0, 0, x, y, x - 5, y + 12, color, 0.42).setOrigin(0, 0)
-        : this.locationId === 'milwaukie'
-          ? this.add.ellipse(x, y, 18, 3, color, 0.14)
-          : this.locationId === 'walla_walla'
-            ? this.add.rectangle(x, y, 5, 2, color, 0.5).setAngle(index * 19)
-            : this.locationId === 'bend'
-              ? this.add.circle(x, y, index % 3 + 1, color, 0.42)
-              : this.add.ellipse(x, y, 4, 7, color, 0.35).setAngle(index * 31);
+      const particle =
+        this.locationId === 'hillsboro_east'
+          ? this.add
+              .line(0, 0, x, y, x - 5, y + 12, color, 0.42)
+              .setOrigin(0, 0)
+          : this.locationId === 'milwaukie'
+            ? this.add.ellipse(x, y, 18, 3, color, 0.14)
+            : this.locationId === 'walla_walla'
+              ? this.add.rectangle(x, y, 5, 2, color, 0.5).setAngle(index * 19)
+              : this.locationId === 'bend'
+                ? this.add.circle(x, y, (index % 3) + 1, color, 0.42)
+                : this.add
+                    .ellipse(x, y, 4, 7, color, 0.35)
+                    .setAngle(index * 31);
       particle.setDepth(1);
       this.tweens.add({
         targets: particle,
-        x: particle.x + (this.locationId === 'walla_walla' ? -95 : this.locationId === 'hillsboro_east' ? -22 : 28),
+        x:
+          particle.x +
+          (this.locationId === 'walla_walla'
+            ? -95
+            : this.locationId === 'hillsboro_east'
+              ? -22
+              : 28),
         y: particle.y + (this.locationId === 'bend' ? -75 : 62),
         alpha: 0,
         duration: 1500 + (index % 7) * 230,
@@ -433,30 +543,33 @@ export class RouteActionScene extends Phaser.Scene {
       walla_walla: 0xa77c35,
       bend: 0x42353b,
     }[this.locationId];
-    const platformData = this.eventIndex === 1
-      ? [{ x: 185, y: 190, axis: 'y' }, { x: 365, y: 174, axis: 'x' }]
-      : [{ x: 155, y: 188, axis: 'x' }, { x: 385, y: 190, axis: 'y' }];
+    const platformData =
+      this.eventIndex === 1
+        ? [
+            { x: 185, y: 190, axis: 'y' },
+            { x: 365, y: 174, axis: 'x' },
+          ]
+        : [
+            { x: 155, y: 188, axis: 'x' },
+            { x: 385, y: 190, axis: 'y' },
+          ];
     platformData.forEach((data, index) => {
-      const platform = this.add.rectangle(data.x, data.y, 38, 7, platformColor)
+      const platform = this.add
+        .rectangle(data.x, data.y, 38, 7, platformColor)
         .setStrokeStyle(2, this.definition.accentColor)
         .setDepth(4);
       this.physics.add.existing(platform);
       const body = platform.body as Phaser.Physics.Arcade.Body;
       body.setAllowGravity(false).setImmovable(true);
-      this.physics.add.collider(
-        this.player!,
-        platform,
-        undefined,
-        () => {
-          const playerBody = this.player?.body;
-          const platformBody = platform.body as Phaser.Physics.Arcade.Body;
-          return Boolean(
-            playerBody &&
-            playerBody.velocity.y >= 0 &&
-            playerBody.bottom <= platformBody.top + 11,
-          );
-        },
-      );
+      this.physics.add.collider(this.player!, platform, undefined, () => {
+        const playerBody = this.player?.body;
+        const platformBody = platform.body as Phaser.Physics.Arcade.Body;
+        return Boolean(
+          playerBody &&
+          playerBody.velocity.y >= 0 &&
+          playerBody.bottom <= platformBody.top + 11,
+        );
+      });
       this.tweens.add({
         targets: platform,
         x: data.axis === 'x' ? data.x + (index ? -42 : 42) : data.x,
@@ -476,13 +589,21 @@ export class RouteActionScene extends Phaser.Scene {
     });
 
     [112, 268, 432].forEach((x, index) => {
-      const token = this.add.circle(x, 125 + (index % 2) * 25, 5, this.definition.accentColor)
+      const token = this.add
+        .circle(x, 125 + (index % 2) * 25, 5, this.definition.accentColor)
         .setStrokeStyle(2, 0xffffff, 0.8)
         .setDepth(8);
       this.physics.add.existing(token);
       const body = token.body as Phaser.Physics.Arcade.Body;
       body.setAllowGravity(false);
-      this.tweens.add({ targets: token, y: token.y - 7, angle: 180, duration: 650, yoyo: true, repeat: -1 });
+      this.tweens.add({
+        targets: token,
+        y: token.y - 7,
+        angle: 180,
+        duration: 650,
+        yoyo: true,
+        repeat: -1,
+      });
       this.physics.add.overlap(this.player!, token, () => {
         if (!token.active || !this.save) return;
         token.destroy();
@@ -512,13 +633,10 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private createEnvironmentMechanic(): void {
-    const zoneXs =
-      this.eventIndex === 1 ? [126, 286, 420] : [168, 330, 448];
+    const zoneXs = this.eventIndex === 1 ? [126, 286, 420] : [168, 330, 448];
     if (this.locationId === 'hillsboro_west') {
       this.mechanicZones = zoneXs.map((x) =>
-        this.add
-          .circle(x, 211, 14, 0x8e3f73, 0.45)
-          .setStrokeStyle(2, 0xd782bd),
+        this.add.circle(x, 211, 14, 0x8e3f73, 0.45).setStrokeStyle(2, 0xd782bd),
       );
       this.add.text(15, 64, 'PURPLE VINES SLOW YOUR MOVEMENT', {
         color: '#ffd0ee',
@@ -527,9 +645,7 @@ export class RouteActionScene extends Phaser.Scene {
       });
     } else if (this.locationId === 'hillsboro_east') {
       this.mechanicZones = zoneXs.map((x) =>
-        this.add
-          .circle(x, 207, 10, 0xffdd55, 0.28)
-          .setStrokeStyle(2, 0xfff2a1),
+        this.add.circle(x, 207, 10, 0xffdd55, 0.28).setStrokeStyle(2, 0xfff2a1),
       );
       zoneXs.forEach((x) =>
         this.add.rectangle(x, 190, 3, 34, 0xffdf55).setAlpha(0.75),
@@ -541,9 +657,7 @@ export class RouteActionScene extends Phaser.Scene {
       });
     } else if (this.locationId === 'milwaukie') {
       this.mechanicZones = zoneXs.map((x) =>
-        this.add
-          .circle(x, 213, 18, 0x3db6d1, 0.48)
-          .setStrokeStyle(2, 0x9deafa),
+        this.add.circle(x, 213, 18, 0x3db6d1, 0.48).setStrokeStyle(2, 0x9deafa),
       );
       this.add.text(15, 64, 'BLUE CURRENT POOLS PUSH YOU BACK', {
         color: '#b8f3ff',
@@ -563,9 +677,7 @@ export class RouteActionScene extends Phaser.Scene {
       });
     } else {
       this.mechanicZones = zoneXs.map((x) =>
-        this.add
-          .circle(x, 211, 12, 0xff542f, 0.46)
-          .setStrokeStyle(2, 0xffc16b),
+        this.add.circle(x, 211, 12, 0xff542f, 0.46).setStrokeStyle(2, 0xffc16b),
       );
       zoneXs.forEach((x) =>
         this.add.triangle(x, 207, 0, 12, 7, 0, 14, 12, 0xff8a3d, 0.8),
@@ -623,14 +735,37 @@ export class RouteActionScene extends Phaser.Scene {
       if (!enemy.sprite.active) return;
       const distance = this.player!.x - enemy.sprite.x;
       if (enemy.flying) {
-        const waveSpeed = this.locationId === 'hillsboro_east' ? 125 : this.locationId === 'bend' ? 170 : 220;
+        const waveSpeed =
+          this.locationId === 'hillsboro_east'
+            ? 125
+            : this.locationId === 'bend'
+              ? 170
+              : 220;
         const waveHeight = this.locationId === 'walla_walla' ? 28 : 18;
-        enemy.sprite.y = enemy.originY + Math.sin(time / waveSpeed + index) * waveHeight;
-        const pursuit = this.locationId === 'hillsboro_east' ? 48 : this.locationId === 'bend' ? 39 : 31;
-        enemy.sprite.setVelocityX(Math.abs(distance) < 110 ? Math.sign(distance) * pursuit : 0);
+        enemy.sprite.y =
+          enemy.originY + Math.sin(time / waveSpeed + index) * waveHeight;
+        const pursuit =
+          this.locationId === 'hillsboro_east'
+            ? 48
+            : this.locationId === 'bend'
+              ? 39
+              : 31;
+        enemy.sprite.setVelocityX(
+          Math.abs(distance) < 110 ? Math.sign(distance) * pursuit : 0,
+        );
       } else {
-        const pursuitRange = this.locationId === 'bend' ? 120 : this.locationId === 'milwaukie' ? 62 : 82;
-        const chaseSpeed = this.locationId === 'bend' ? 42 : this.locationId === 'walla_walla' ? 31 : 23;
+        const pursuitRange =
+          this.locationId === 'bend'
+            ? 120
+            : this.locationId === 'milwaukie'
+              ? 62
+              : 82;
+        const chaseSpeed =
+          this.locationId === 'bend'
+            ? 42
+            : this.locationId === 'walla_walla'
+              ? 31
+              : 23;
         const patrolSpeed = this.locationId === 'milwaukie' ? 22 : 15;
         enemy.sprite.setVelocityX(
           Math.abs(distance) < pursuitRange
@@ -638,7 +773,8 @@ export class RouteActionScene extends Phaser.Scene {
             : Math.sin(time / 500 + index) * patrolSpeed,
         );
         if (this.locationId === 'hillsboro_west')
-          enemy.sprite.y = enemy.originY - Math.max(0, Math.sin(time / 330 + index) * 8);
+          enemy.sprite.y =
+            enemy.originY - Math.max(0, Math.sin(time / 330 + index) * 8);
         enemy.sprite.setFlipX(enemy.sprite.body.velocity.x < 0);
       }
       if (
@@ -655,7 +791,8 @@ export class RouteActionScene extends Phaser.Scene {
     if (!this.player) return;
     this.nextAttackAt = time + 280;
     this.attackingUntil = time + 210;
-    if (this.save) this.player.play(playerVisual(this.save.activeTeamId).attack, true);
+    if (this.save)
+      this.player.play(playerVisual(this.save.activeTeamId).attack, true);
     const startX = this.player.x + this.facing * 14;
     const endX = this.player.x + this.facing * 58;
     const lanes = this.blessing === 'buckshot' ? [-12, 0, 12] : [0];
@@ -683,8 +820,13 @@ export class RouteActionScene extends Phaser.Scene {
         18,
       );
       const enemy = this.enemies.find(
-        (candidate) => candidate.sprite.active && !hitEnemies.has(candidate) &&
-          Phaser.Geom.Intersects.RectangleToRectangle(bounds, candidate.sprite.getBounds()),
+        (candidate) =>
+          candidate.sprite.active &&
+          !hitEnemies.has(candidate) &&
+          Phaser.Geom.Intersects.RectangleToRectangle(
+            bounds,
+            candidate.sprite.getBounds(),
+          ),
       );
       if (enemy) hitEnemies.add(enemy);
     });
@@ -694,7 +836,11 @@ export class RouteActionScene extends Phaser.Scene {
       if (result.defeated) {
         enemy.sprite.destroy();
         if (this.save) {
-          this.save = addScore(this.save, SCORE_VALUES.enemy, new Date().toISOString());
+          this.save = addScore(
+            this.save,
+            SCORE_VALUES.enemy,
+            new Date().toISOString(),
+          );
           this.repository.save(this.save);
           this.refreshHud();
         }
@@ -708,7 +854,10 @@ export class RouteActionScene extends Phaser.Scene {
     if (!this.player || !this.save || this.sequenceOver) return;
     this.invulnerableUntil = time + 900;
     const result = applyDamage(
-      { current: this.save.resources.life, maximum: this.save.resources.maxLife },
+      {
+        current: this.save.resources.life,
+        maximum: this.save.resources.maxLife,
+      },
       1,
     );
     this.save = {
@@ -727,7 +876,10 @@ export class RouteActionScene extends Phaser.Scene {
       this.fullHealUsed = true;
       this.save = {
         ...this.save,
-        resources: { ...this.save.resources, life: this.save.resources.maxLife },
+        resources: {
+          ...this.save.resources,
+          life: this.save.resources.maxLife,
+        },
         savedAt: new Date().toISOString(),
       };
       this.repository.save(this.save);
@@ -782,14 +934,21 @@ export class RouteActionScene extends Phaser.Scene {
     if (!event) return;
     this.save = {
       ...this.save,
-      stats: { ...this.save.stats, experience: this.save.stats.experience + 35 },
+      stats: {
+        ...this.save.stats,
+        experience: this.save.stats.experience + 35,
+      },
       flags: {
         ...this.save.flags,
         [routeEventFlag(this.locationId, event.id)]: true,
       },
       savedAt: new Date().toISOString(),
     };
-    this.save = addScore(this.save, SCORE_VALUES.actionSequence, new Date().toISOString());
+    this.save = addScore(
+      this.save,
+      SCORE_VALUES.actionSequence,
+      new Date().toISOString(),
+    );
     this.repository.save(this.save);
     this.sequenceOver = true;
     this.player?.setVelocity(0, 0);
@@ -871,19 +1030,37 @@ export class RouteActionScene extends Phaser.Scene {
     const creature = this.add.graphics();
     if (this.locationId === 'hillsboro_west') {
       creature.fillStyle(0x53284f).fillEllipse(13, 11, 24, 15);
-      creature.lineStyle(2, 0xb95e9d).lineBetween(4, 8, 0, 3).lineBetween(21, 8, 26, 3);
+      creature
+        .lineStyle(2, 0xb95e9d)
+        .lineBetween(4, 8, 0, 3)
+        .lineBetween(21, 8, 26, 3);
     } else if (this.locationId === 'hillsboro_east') {
       creature.fillStyle(0xd6b52d).fillRect(3, 5, 20, 13);
-      creature.lineStyle(2, 0xffff91).lineBetween(2, 11, 24, 2).lineBetween(5, 20, 21, 10);
+      creature
+        .lineStyle(2, 0xffff91)
+        .lineBetween(2, 11, 24, 2)
+        .lineBetween(5, 20, 21, 10);
     } else if (this.locationId === 'milwaukie') {
       creature.fillStyle(0x2c91a2).fillEllipse(13, 12, 20, 13);
-      creature.lineStyle(3, 0x163f55).lineBetween(5, 12, 0, 7).lineBetween(21, 12, 26, 7).lineBetween(7, 17, 3, 21).lineBetween(19, 17, 23, 21);
+      creature
+        .lineStyle(3, 0x163f55)
+        .lineBetween(5, 12, 0, 7)
+        .lineBetween(21, 12, 26, 7)
+        .lineBetween(7, 17, 3, 21)
+        .lineBetween(19, 17, 23, 21);
     } else if (this.locationId === 'walla_walla') {
       creature.fillStyle(0xb7842d).fillEllipse(13, 11, 23, 15);
-      creature.lineStyle(2, 0xf5dd73).lineBetween(6, 4, 3, 0).lineBetween(12, 4, 12, 0).lineBetween(19, 5, 22, 1);
+      creature
+        .lineStyle(2, 0xf5dd73)
+        .lineBetween(6, 4, 3, 0)
+        .lineBetween(12, 4, 12, 0)
+        .lineBetween(19, 5, 22, 1);
     } else {
       creature.fillStyle(0x432d35).fillEllipse(13, 12, 24, 17);
-      creature.fillStyle(0xff5d2f).fillTriangle(4, 8, 8, 0, 11, 9).fillTriangle(15, 9, 19, 0, 23, 9);
+      creature
+        .fillStyle(0xff5d2f)
+        .fillTriangle(4, 8, 8, 0, 11, 9)
+        .fillTriangle(15, 9, 19, 0, 23, 9);
     }
     creature.fillStyle(0xffffff).fillCircle(8, 9, 3).fillCircle(18, 9, 3);
     creature.fillStyle(0x17151d).fillCircle(8, 9, 1).fillCircle(18, 9, 1);
@@ -898,11 +1075,12 @@ export class RouteActionScene extends Phaser.Scene {
     }[this.locationId];
     flyer.fillStyle(flyerColor).fillTriangle(0, 10, 13, 2, 9, 19);
     flyer.fillTriangle(26, 10, 13, 2, 17, 19);
-    flyer.fillStyle(this.locationId === 'bend' ? 0x34242b : 0xffe18a).fillCircle(13, 10, 6);
+    flyer
+      .fillStyle(this.locationId === 'bend' ? 0x34242b : 0xffe18a)
+      .fillCircle(13, 10, 6);
     flyer.fillStyle(0x17151d).fillCircle(11, 9, 2).fillCircle(16, 9, 2);
     if (this.locationId === 'hillsboro_east')
       flyer.lineStyle(2, 0xffffff).lineBetween(13, 3, 18, 0);
     flyer.generateTexture(flyerKey, 26, 20).destroy();
   }
 }
-

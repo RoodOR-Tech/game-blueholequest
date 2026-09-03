@@ -1,4 +1,4 @@
-import { getTeam, type TeamId } from '../../content/teams';
+import { getTeam, isTeamId, type TeamId } from '../../content/teams';
 
 export const SAVE_VERSION = 1 as const;
 
@@ -106,19 +106,53 @@ export function normalizeSaveData(value: unknown): SaveData | null {
 }
 
 export function isSaveData(value: unknown): value is SaveData {
-  if (typeof value !== 'object' || value === null) return false;
+  if (!isRecord(value)) return false;
   const candidate = value as Partial<SaveData>;
+  const stats = candidate.stats;
+  const resources = candidate.resources;
   return (
     candidate.version === SAVE_VERSION &&
-    typeof candidate.activeTeamId === 'string' &&
+    isTeamId(candidate.activeTeamId) &&
     typeof candidate.checkpointId === 'string' &&
     typeof candidate.savedAt === 'string' &&
-    typeof candidate.stats === 'object' &&
-    typeof candidate.resources === 'object' &&
-    Array.isArray(candidate.techniques) &&
-    Array.isArray(candidate.spells) &&
-    Array.isArray(candidate.relics) &&
-    Array.isArray(candidate.inventory)
+    isRecord(stats) &&
+    isFiniteNumber(stats.attackLevel) &&
+    isFiniteNumber(stats.magicLevel) &&
+    isFiniteNumber(stats.lifeLevel) &&
+    isFiniteNumber(stats.experience) &&
+    (stats.score === undefined || isFiniteNumber(stats.score)) &&
+    isRecord(resources) &&
+    isFiniteNumber(resources.life) &&
+    isFiniteNumber(resources.maxLife) &&
+    isFiniteNumber(resources.magic) &&
+    isFiniteNumber(resources.maxMagic) &&
+    (resources.lives === undefined || isFiniteNumber(resources.lives)) &&
+    (resources.maxLives === undefined || isFiniteNumber(resources.maxLives)) &&
+    isStringArray(candidate.techniques) &&
+    isStringArray(candidate.spells) &&
+    isStringArray(candidate.relics) &&
+    isStringArray(candidate.inventory) &&
+    isBooleanRecord(candidate.flags)
   );
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === 'string')
+  );
+}
+
+function isBooleanRecord(value: unknown): value is Record<string, boolean> {
+  return (
+    isRecord(value) &&
+    Object.values(value).every((item) => typeof item === 'boolean')
+  );
+}

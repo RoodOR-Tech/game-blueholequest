@@ -6,7 +6,9 @@ describe('route action sequences', () => {
   it('provides two side-scrolling sequences for every route', () => {
     LOCATION_ROUTES.forEach((route) => {
       expect(
-        ROUTE_ACTIONS.filter((action) => action.locationId === route.locationId),
+        ROUTE_ACTIONS.filter(
+          (action) => action.locationId === route.locationId,
+        ),
       ).toHaveLength(2);
     });
   });

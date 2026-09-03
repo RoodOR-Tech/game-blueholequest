@@ -12,7 +12,9 @@ export interface BuddaEncounter {
   readonly reward: string;
 }
 
-export const BUDDA_ENCOUNTERS: Readonly<Record<BuddaLocationId, BuddaEncounter>> = {
+export const BUDDA_ENCOUNTERS: Readonly<
+  Record<BuddaLocationId, BuddaEncounter>
+> = {
   rockaway: {
     locationId: 'rockaway',
     line: '*YAWN* THE SINK HAS EXCELLENT ACOUSTICS.',
