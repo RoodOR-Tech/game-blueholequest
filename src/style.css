@@ -62,15 +62,15 @@ canvas {
 
 .landscape-touch-controls__button {
   position: absolute;
-  width: clamp(54px, 9vh, 76px);
-  height: clamp(54px, 9vh, 76px);
+  width: clamp(72px, 19vh, 92px);
+  height: clamp(72px, 19vh, 92px);
   padding: 0;
   border: 3px solid rgba(207, 233, 244, 0.92);
   border-radius: 50%;
   background: rgba(8, 17, 29, 0.72);
   color: #fff;
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
-  font: 700 clamp(22px, 4.5vh, 36px) / 1 monospace;
+  font: 700 clamp(28px, 7vh, 42px) / 1 monospace;
   pointer-events: auto;
   touch-action: none;
 }
