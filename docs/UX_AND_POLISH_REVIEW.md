@@ -31,10 +31,10 @@ Fix: re-export the sheet from the original artwork. It cannot be repaired from t
 
 Touch button meanings change between scenes:
 
-| Scene | A | B |
-| --- | --- | --- |
-| Route action (`RouteActionScene.ts:128`) | Jump | Attack |
-| Boss (`LocationBossScene.ts:80`) | Attack | Leave the fight immediately |
+| Scene                                    | A      | B                           |
+| ---------------------------------------- | ------ | --------------------------- |
+| Route action (`RouteActionScene.ts:128`) | Jump   | Attack                      |
+| Boss (`LocationBossScene.ts:80`)         | Attack | Leave the fight immediately |
 
 A player who has just spent a route learning "B attacks" will press B at the boss and be thrown back to the map with no confirmation (`LocationBossScene.ts:160`). Keep B as attack everywhere, and move "leave" to a deliberate action with a confirm step.
 
