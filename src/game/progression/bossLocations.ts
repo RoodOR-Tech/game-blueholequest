@@ -64,7 +64,7 @@ export const BOSS_LOCATIONS = [
     bossColor: 0x662f37,
     maximumHealth: 8,
     projectileSpeed: 96,
-    attackInterval: 920,
+    attackInterval: 1250,
   },
 ] as const;
 
