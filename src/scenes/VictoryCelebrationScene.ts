@@ -38,6 +38,7 @@ export class VictoryCelebrationScene extends Phaser.Scene {
 
   create(): void {
     gameAudio.bind(this, 'victory');
+    this.leaving = false;
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
