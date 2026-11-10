@@ -67,6 +67,18 @@ export class Highway26Scene extends Phaser.Scene {
 
   create(): void {
     gameAudio.bind(this, 'route');
+    // Phaser reuses this scene object, so state from the last visit must not
+    // carry over: a stale game-over flag would swallow every button press.
+    this.gameOver = false;
+    this.eventPanel = undefined;
+    this.outcomePanel = undefined;
+    this.activeEvent = undefined;
+    this.choiceIndex = 0;
+    this.choiceTexts = [];
+    this.labels = [];
+    this.marker = undefined;
+    this.graphics = undefined;
+    this.departButton = undefined;
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');

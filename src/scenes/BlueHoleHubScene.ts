@@ -76,6 +76,8 @@ export class BlueHoleHubScene extends Phaser.Scene {
 
   create(): void {
     gameAudio.bind(this, 'title');
+    this.postGameMode = false;
+    this.postGameIndex = 0;
     this.save = this.repository.load() ?? undefined;
     if (!this.save) {
       this.scene.start('team-select');
