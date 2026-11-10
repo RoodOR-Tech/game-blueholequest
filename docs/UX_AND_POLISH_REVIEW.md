@@ -44,7 +44,7 @@ The sections below describe the game as first reviewed. This table records what 
 | 3.7 Page metadata           | Fixed    | Description, preview tags, icon, and no text selection or pinch-zoom. No preview image yet.                                                                                        |
 | 3.8 GDD text                | **Open** | The GDD document itself is unchanged.                                                                                                                                              |
 
-One consequence to be aware of: the world is no longer drawn into a 256 × 240 buffer and enlarged. It is drawn directly at a whole-number multiple of that size, so characters and text show more detail than strict 8-bit rendering would. This departs from the letter of D-008. To return to chunky pixels for the world, cap `MAXIMUM_RENDER_SCALE` in `src/app/display.ts` at 1 and scale the canvas with CSS; text would then need a bitmap font.
+The world is no longer drawn into a 256 × 240 buffer and enlarged. It is drawn directly at a whole-number multiple of that size, so characters and text show more detail than strict 8-bit rendering would. This was approved and is recorded as the revised D-008 in `DESIGN_DECISIONS.md`.
 
 ## 1. P0 — Defects
 
