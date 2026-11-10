@@ -1,10 +1,5 @@
 import Phaser from 'phaser';
 import {
-  DAD_SPRITE_PATH,
-  DAD_TEXTURE_KEY,
-  registerDadAnimations,
-} from '../actors/dadAnimations';
-import {
   preloadFamilySprites,
   registerFamilyAnimations,
 } from '../actors/familyAnimations';
@@ -51,7 +46,6 @@ export class BootScene extends Phaser.Scene {
       status.setText('GETTING EVERYONE READY…'),
     );
 
-    this.load.image(DAD_TEXTURE_KEY, DAD_SPRITE_PATH);
     preloadFamilySprites(this);
     preloadBuddaSprites(this);
   }
@@ -59,7 +53,6 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     // Let the "getting ready" message paint before the sprite clean-up runs.
     this.time.delayedCall(60, () => {
-      registerDadAnimations(this);
       registerFamilyAnimations(this);
       ensureBuddaTexture(this);
       this.scene.start('title');

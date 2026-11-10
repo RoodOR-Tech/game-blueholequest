@@ -1,16 +1,20 @@
 import Phaser from 'phaser';
 import type { TeamId } from '../content/teams';
-import {
-  DAD_SPRITE_SCALE,
-  DAD_TEXTURE_KEY,
-  SMOOTH_FILTER,
-} from './dadAnimations';
 
-type IllustratedTeamId = Exclude<TeamId, 'dad_paula'>;
+// Phaser.Textures.FilterMode.LINEAR, kept numeric so this module loads in tests
+// without a browser. Detailed illustrations are smoothed when drawn small.
+const SMOOTH_FILTER = 0 as Phaser.Textures.FilterMode;
 
+// Every sheet holds eight poses in 724-pixel-tall frames with feet on row 600:
+// idle ×2, walk ×3, jump, attack ×2.
 const SHEETS: Readonly<
-  Record<IllustratedTeamId, { key: string; path: string; scale: number }>
+  Record<TeamId, { key: string; path: string; scale: number }>
 > = {
+  dad_paula: {
+    key: 'dad-sprites-v2',
+    path: 'assets/sprites/dad-sprites-v2.png',
+    scale: 0.16,
+  },
   jen_omar: {
     key: 'jen-sprites-v1',
     path: 'assets/sprites/jen-sprites-v1.png',
@@ -40,7 +44,7 @@ export function preloadFamilySprites(scene: Phaser.Scene): void {
 }
 
 export function registerFamilyAnimations(scene: Phaser.Scene): void {
-  (Object.keys(SHEETS) as IllustratedTeamId[]).forEach((teamId) => {
+  (Object.keys(SHEETS) as TeamId[]).forEach((teamId) => {
     const sheet = SHEETS[teamId];
     const texture = cleanConnectedBackground(scene, sheet.key);
     const image = texture.getSourceImage() as HTMLCanvasElement;
@@ -308,17 +312,6 @@ function createAnimation(
 }
 
 export function playerVisual(teamId: TeamId) {
-  if (teamId === 'dad_paula')
-    return {
-      texture: DAD_TEXTURE_KEY,
-      frame: 'dad-idle-0',
-      scale: DAD_SPRITE_SCALE,
-      idle: 'dad-idle',
-      walk: 'dad-walk',
-      attack: 'dad-attack',
-      jumpTexture: DAD_TEXTURE_KEY,
-      jumpFrame: 'dad-jump',
-    };
   const sheet = SHEETS[teamId];
   return {
     texture: `${sheet.key}-clean`,
@@ -336,9 +329,7 @@ export function configurePlayerBody(
   sprite: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody,
   teamId: TeamId,
 ): void {
-  if (teamId === 'dad_paula') sprite.body.setSize(210, 420).setOffset(30, 180);
-  else
-    sprite.body
-      .setSize(teamId === 'jason_hilary' ? 190 : 165, 420)
-      .setOffset(teamId === 'jason_hilary' ? 35 : 48, 180);
+  sprite.body
+    .setSize(teamId === 'jason_hilary' ? 190 : 165, 420)
+    .setOffset(teamId === 'jason_hilary' ? 35 : 48, 180);
 }
