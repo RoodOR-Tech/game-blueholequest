@@ -29,13 +29,20 @@ const BUTTONS: readonly { role: ButtonRole; label: string }[] = [
   { role: 'primary', label: 'A' },
   { role: 'secondary', label: 'B' },
 ];
-// Space reserved outside the picture, in CSS pixels. Mirrors style.css.
-const SIDE_GUTTER = 170;
-const BELOW_STRIP = 250;
+// Space reserved outside the picture, in control units. Mirrors style.css.
+const SIDE_GUTTER = 180;
+const BELOW_STRIP = 260;
+// One control unit is a CSS pixel on a 400-pixel-wide phone. Sizing from the
+// viewport keeps buttons finger-sized when the browser lays the page out wider
+// than the screen, as "Desktop site" mode does.
+const UNIT_BASIS = 400;
+const MINIMUM_UNIT = 0.8;
+const MAXIMUM_UNIT = 2.6;
 
 let overlay: HTMLDivElement | undefined;
 let binding: Binding | undefined;
 let touchDevice = false;
+let unit = 0;
 const held = new Map<ButtonRole, GameAction>();
 
 function actionFor(role: ButtonRole): GameAction | undefined {
@@ -53,25 +60,34 @@ function releaseAll(): void {
     .forEach((button) => button.classList.remove('is-pressed'));
 }
 
+function measureUnit(): number {
+  const shortSide = Math.min(window.innerWidth, window.innerHeight);
+  const raw = shortSide / UNIT_BASIS;
+  return Math.min(MAXIMUM_UNIT, Math.max(MINIMUM_UNIT, raw));
+}
+
 /** Picks whichever control placement leaves the larger picture. */
-function chooseLayout(): TouchLayout {
+function chooseLayout(scale: number): TouchLayout {
   if (!touchDevice) return 'none';
   const width = window.innerWidth;
   const height = window.innerHeight;
   const sides = Math.min(
-    (width - SIDE_GUTTER * 2) / WORLD_WIDTH,
+    (width - SIDE_GUTTER * scale * 2) / WORLD_WIDTH,
     height / WORLD_HEIGHT,
   );
   const below = Math.min(
     width / WORLD_WIDTH,
-    (height - BELOW_STRIP) / WORLD_HEIGHT,
+    (height - BELOW_STRIP * scale) / WORLD_HEIGHT,
   );
   return sides >= below ? 'sides' : 'below';
 }
 
 function refreshLayout(): void {
-  const layout = chooseLayout();
-  if (document.body.dataset.touchLayout === layout) return;
+  const nextUnit = measureUnit();
+  const layout = chooseLayout(nextUnit);
+  if (nextUnit === unit && document.body.dataset.touchLayout === layout) return;
+  unit = nextUnit;
+  document.documentElement.style.setProperty('--u', nextUnit.toFixed(3));
   document.body.dataset.touchLayout = layout;
   window.dispatchEvent(new Event('blue-hole-layout'));
 }
