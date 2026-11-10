@@ -24,6 +24,8 @@ import { BossBar, StatusHud } from '../ui/StatusHud';
 import { TouchControls } from '../ui/TouchControls';
 
 const MOVE_SPEED = 68;
+// Slow enough to step out from under a marked impact at MOVE_SPEED.
+const METEOR_FALL_SPEED = 80;
 const ATTACK_COOLDOWN = 270;
 const INVULNERABLE_MS = 850;
 
@@ -363,7 +365,14 @@ export class LocationBossScene extends Phaser.Scene {
         .setStrokeStyle(2, 0xff6a3d);
       this.time.delayedCall(320 + index * 130, () => {
         warning.destroy();
-        this.spawnBossProjectile('boss-meteor', x, 76, 0, 112, 'meteor');
+        this.spawnBossProjectile(
+          'boss-meteor',
+          x,
+          76,
+          0,
+          METEOR_FALL_SPEED,
+          'meteor',
+        );
       });
     });
     this.cameras.main.shake(150, 0.005);
