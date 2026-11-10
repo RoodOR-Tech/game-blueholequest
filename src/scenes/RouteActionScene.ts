@@ -36,6 +36,9 @@ import {
 import { SaveRepository } from '../game/saves/repository';
 import { addScore, SCORE_VALUES } from '../game/progression/scoring';
 import type { SaveData } from '../game/saves/schema';
+import { WORLD_WIDTH } from '../app/display';
+import { requestPauseMenu, setPauseLeaveOption } from '../ui/PauseMenu';
+import { StatusHud } from '../ui/StatusHud';
 import { TouchControls } from '../ui/TouchControls';
 
 interface ActionEnemy {
@@ -69,6 +72,8 @@ const MAGIC_BLESSINGS: readonly {
   },
 ];
 
+const ROUTE_WIDTH = 512;
+
 export class RouteActionScene extends Phaser.Scene {
   private locationId: BossLocationId = 'hillsboro_west';
   private eventIndex: 1 | 2 = 1;
@@ -80,7 +85,8 @@ export class RouteActionScene extends Phaser.Scene {
   private mechanicZones: Phaser.GameObjects.Arc[] = [];
   private windLines: Phaser.GameObjects.Line[] = [];
   private message?: Phaser.GameObjects.Text;
-  private hud?: Phaser.GameObjects.Text;
+  private hud?: StatusHud;
+  private shadow?: Phaser.GameObjects.Ellipse;
   private facing: -1 | 1 = 1;
   private nextAttackAt = 0;
   private attackingUntil = 0;
@@ -119,7 +125,6 @@ export class RouteActionScene extends Phaser.Scene {
     }
     this.definition = routeActionFor(this.locationId, this.eventIndex);
     this.physics.world.setBounds(0, 0, 512, 240);
-    this.cameras.main.setBounds(0, 0, 512, 240);
     this.drawWorld();
     this.createWeather();
     this.createTextures();
@@ -129,8 +134,16 @@ export class RouteActionScene extends Phaser.Scene {
       primary: 'jump',
       secondary: 'attack',
     });
+    setPauseLeaveOption({
+      label: 'RETURN TO THE MAP',
+      run: () => this.returnToRoute(),
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+      setPauseLeaveOption(undefined),
+    );
     const floor = this.add.rectangle(256, 229, 512, 22);
     this.physics.add.existing(floor, true);
+    this.shadow = this.add.ellipse(34, 218, 26, 6, 0x000000, 0.3);
     const visual = playerVisual(this.save.activeTeamId);
     this.player = this.physics.add.sprite(
       34,
@@ -145,7 +158,7 @@ export class RouteActionScene extends Phaser.Scene {
       .play(visual.idle);
     configurePlayerBody(this.player, this.save.activeTeamId);
     this.physics.add.collider(this.player, floor);
-    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    this.cameras.main.setScroll(0, 0);
     this.definition.obstacleXs.forEach((x, index) =>
       this.createObstacle(x, index, floor),
     );
@@ -257,7 +270,33 @@ export class RouteActionScene extends Phaser.Scene {
     this.updateEnvironmentMechanic(time);
     this.updateBudda();
     if (this.player.x >= 482) this.completeSequence();
-    if (this.controls.actions.get('cancel').pressed) this.returnToRoute();
+    this.followPlayer();
+    // The shadow stays on the ground and shrinks as the player rises.
+    const lift = Phaser.Math.Clamp((180 - this.player.y) / 70, 0, 0.6);
+    this.shadow
+      ?.setPosition(this.player.x, 218)
+      .setScale(1 - lift)
+      .setVisible(this.player.y < 200);
+    // A steady fade shows the brief safety window after a hit.
+    this.player.setAlpha(time < this.invulnerableUntil ? 0.55 : 1);
+    // Leaving mid-route is a deliberate choice made from the pause menu.
+    if (
+      this.controls.actions.get('pause').pressed ||
+      this.controls.actions.get('cancel').pressed
+    )
+      requestPauseMenu();
+  }
+
+  /** Keeps the player centred while the view stays inside the 512-wide route. */
+  private followPlayer(): void {
+    if (!this.player) return;
+    const camera = this.cameras.main;
+    const target = Phaser.Math.Clamp(
+      this.player.x - WORLD_WIDTH / 2,
+      0,
+      ROUTE_WIDTH - WORLD_WIDTH,
+    );
+    camera.scrollX += (target - camera.scrollX) * 0.12;
   }
 
   private updateBudda(): void {
@@ -338,8 +377,9 @@ export class RouteActionScene extends Phaser.Scene {
       return;
     }
     this.choosingMagic = true;
+    const dim = this.add.rectangle(128, 120, 256, 240, 0x04090f, 0.72);
     const shade = this.add
-      .rectangle(128, 126, 242, 172, 0x07111c, 0.97)
+      .rectangle(128, 126, 242, 172, 0x07111c, 1)
       .setStrokeStyle(2, 0x75d9ff);
     const title = this.add
       .text(128, 53, 'CHOOSE MAGIC • COST 1 MP', {
@@ -368,7 +408,8 @@ export class RouteActionScene extends Phaser.Scene {
         .setOrigin(0.5),
     );
     this.magicChoicePanel = this.add
-      .container(0, 0, [shade, title, hint, ...this.magicChoiceTexts])
+      .container(0, 0, [dim, shade, title, hint, ...this.magicChoiceTexts])
+      .setScrollFactor(0)
       .setDepth(500);
     this.refreshMagicChoice();
   }
@@ -972,11 +1013,7 @@ export class RouteActionScene extends Phaser.Scene {
   }
 
   private createHud(): void {
-    this.hud = this.add.text(7, 8, '', {
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      fontSize: '7px',
-    });
+    this.hud = new StatusHud(this, 7, 6);
     this.message = this.add
       .text(128, 47, `${this.definition.terrain} • REACH THE ROUTE MARKER`, {
         align: 'center',
@@ -995,11 +1032,16 @@ export class RouteActionScene extends Phaser.Scene {
 
   private refreshHud(): void {
     if (!this.save) return;
-    this.hud
-      ?.setText(
-        `${this.definition.title} • SCORE ${this.save.stats.score}\nHP ${this.save.resources.life}/${this.save.resources.maxLife} • LIVES ${this.save.resources.lives}/${this.save.resources.maxLives}`,
-      )
-      .setScrollFactor(0);
+    this.hud?.update({
+      title: this.definition.title,
+      score: this.save.stats.score,
+      life: this.save.resources.life,
+      maxLife: this.save.resources.maxLife,
+      magic: this.save.resources.magic,
+      maxMagic: this.save.resources.maxMagic,
+      lives: this.save.resources.lives,
+      maxLives: this.save.resources.maxLives,
+    });
   }
 
   private drawWorld(): void {

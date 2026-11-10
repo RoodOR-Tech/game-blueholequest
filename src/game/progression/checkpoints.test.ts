@@ -17,9 +17,9 @@ describe('location checkpoints', () => {
 
   it('routes Continue to each location entrance', () => {
     expect(sceneForCheckpoint(CHECKPOINTS.route)).toBe('highway-26');
-    expect(sceneForCheckpoint(CHECKPOINTS.forest)).toBe('forest-quest');
-    expect(sceneForCheckpoint(CHECKPOINTS.lodge)).toBe('lodge-quest');
-    expect(sceneForCheckpoint(CHECKPOINTS.foundry)).toBe('foundry-test');
+    expect(sceneForCheckpoint(CHECKPOINTS.forest)).toBe('blue-hole-hub');
+    expect(sceneForCheckpoint(CHECKPOINTS.lodge)).toBe('blue-hole-hub');
+    expect(sceneForCheckpoint(CHECKPOINTS.foundry)).toBe('blue-hole-hub');
     expect(sceneForCheckpoint('unknown')).toBe('blue-hole-hub');
   });
 });

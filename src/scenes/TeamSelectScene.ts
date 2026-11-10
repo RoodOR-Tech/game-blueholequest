@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { gameAudio } from '../audio/GameAudio';
 import { TEAMS, type TeamDefinition } from '../content/teams';
 import { drawTeamPortrait } from '../actors/teamAppearance';
-import { sanitizeGamepads } from '../game/input/PhaserInput';
+import { PhaserInput, sanitizeGamepads } from '../game/input/PhaserInput';
+import { TouchControls } from '../ui/TouchControls';
 import { SaveRepository } from '../game/saves/repository';
 import { createNewSave } from '../game/saves/schema';
 
@@ -16,9 +17,8 @@ export class TeamSelectScene extends Phaser.Scene {
   private selectedIndex = 0;
   private cards: Phaser.GameObjects.Container[] = [];
   private statusText?: Phaser.GameObjects.Text;
-  private readonly selectPrevious = () => this.moveSelection(-1);
-  private readonly selectNext = () => this.moveSelection(1);
-  private readonly confirm = () => this.confirmSelection();
+  private controls?: PhaserInput;
+  private inputReady = false;
 
   constructor() {
     super('team-select');
@@ -37,7 +37,7 @@ export class TeamSelectScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(128, 29, 'UP/DOWN TO SELECT • ENTER TO CONFIRM', {
+      .text(128, 29, 'UP / DOWN: SELECT • A / ENTER: CONFIRM', {
         color: '#91b4c8',
         fontFamily: 'monospace',
         fontSize: '6px',
@@ -56,20 +56,24 @@ export class TeamSelectScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.renderSelection();
-    this.input.keyboard?.on('keydown-UP', this.selectPrevious);
-    this.input.keyboard?.on('keydown-W', this.selectPrevious);
-    this.input.keyboard?.on('keydown-DOWN', this.selectNext);
-    this.input.keyboard?.on('keydown-S', this.selectNext);
-    this.input.keyboard?.on('keydown-ENTER', this.confirm);
-    this.input.keyboard?.on('keydown-SPACE', this.confirm);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.input.keyboard?.off('keydown-UP', this.selectPrevious);
-      this.input.keyboard?.off('keydown-W', this.selectPrevious);
-      this.input.keyboard?.off('keydown-DOWN', this.selectNext);
-      this.input.keyboard?.off('keydown-S', this.selectNext);
-      this.input.keyboard?.off('keydown-ENTER', this.confirm);
-      this.input.keyboard?.off('keydown-SPACE', this.confirm);
+    this.controls = new PhaserInput(this);
+    new TouchControls(this, this.controls);
+    // Ignore a button still held from the previous screen.
+    this.inputReady = false;
+    this.time.delayedCall(200, () => {
+      this.inputReady = true;
     });
+  }
+
+  update(): void {
+    if (!this.controls) return;
+    this.controls.update(this.input.gamepad?.getPad(0));
+    if (!this.inputReady) return;
+    const actions = this.controls.actions;
+    if (actions.get('up').pressed) this.moveSelection(-1);
+    if (actions.get('down').pressed) this.moveSelection(1);
+    if (actions.get('confirm').pressed || actions.get('jump').pressed)
+      this.confirmSelection();
   }
 
   private createCard(
@@ -94,9 +98,10 @@ export class TeamSelectScene extends Phaser.Scene {
         fontStyle: 'bold',
       })
       .setOrigin(0, 0);
+    // Only flag teams that cannot be chosen yet; "ready" on every card says nothing.
     const readiness = this.add
-      .text(92, -5, team.productionReady ? 'READY' : 'PLANNED', {
-        color: team.productionReady ? '#83e38e' : '#91b4c8',
+      .text(92, -5, team.productionReady ? '' : 'PLANNED', {
+        color: '#91b4c8',
         fontFamily: 'monospace',
         fontSize: '6px',
       })
@@ -109,10 +114,15 @@ export class TeamSelectScene extends Phaser.Scene {
     container
       .setSize(CARD_WIDTH, CARD_HEIGHT)
       .setInteractive({ useHandCursor: true });
+    // First tap previews a team; tapping the highlighted team confirms it.
     container.on('pointerdown', () => {
+      if (this.selectedIndex === index) {
+        this.confirmSelection();
+        return;
+      }
       this.selectedIndex = index;
+      gameAudio.play('select');
       this.renderSelection();
-      this.confirmSelection();
     });
     return container;
   }
@@ -123,6 +133,7 @@ export class TeamSelectScene extends Phaser.Scene {
       0,
       TEAMS.length,
     );
+    gameAudio.play('select');
     this.renderSelection();
   }
 
@@ -162,4 +173,3 @@ export class TeamSelectScene extends Phaser.Scene {
     this.scene.start('blue-hole-hub');
   }
 }
-

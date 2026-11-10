@@ -701,11 +701,13 @@ export class Highway26Scene extends Phaser.Scene {
       .circle(NODE_X[0], this.nodeY(0), 4, 0xffffff)
       .setStrokeStyle(2, 0x08111d);
     this.labels.push(
-      this.add.text(197, 60, 'BOSS + ARTIFACT', {
-        color: '#7b2929',
-        fontFamily: 'monospace',
-        fontSize: '5px',
-      }),
+      this.add
+        .text(240, 60, 'BOSS + ARTIFACT', {
+          color: '#7b2929',
+          fontFamily: 'monospace',
+          fontSize: '5px',
+        })
+        .setOrigin(1, 0),
     );
     this.departButton = this.add
       .text(128, 198, 'ADVANCE TO NEXT STOP', {

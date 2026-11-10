@@ -12,6 +12,14 @@ export type SoundEffect =
   | 'artifact'
   | 'firework';
 
+function readMuted(): boolean {
+  try {
+    return window.localStorage.getItem('blue-hole-muted') === 'true';
+  } catch {
+    return false;
+  }
+}
+
 const NOTE = (semitones: number): number => 220 * 2 ** (semitones / 12);
 const THEMES: Record<
   AudioTheme,
@@ -23,22 +31,26 @@ const THEMES: Record<
   victory: { notes: [0, 4, 7, 12, 7, 11, 14, 19], beat: 190, wave: 'square' },
 };
 
+const MASTER_VOLUME = 0.18;
+
 class GameAudioController {
   private context?: AudioContext;
   private master?: GainNode;
   private theme: AudioTheme = 'title';
   private timer?: number;
   private step = 0;
-  private muted = window.localStorage.getItem('blue-hole-muted') === 'true';
+  private muted = readMuted();
+  private suspended = false;
 
   bind(scene: Phaser.Scene, theme: AudioTheme): void {
     this.setTheme(theme);
     const unlock = () => this.unlock();
     scene.input.once('pointerdown', unlock);
     scene.input.keyboard?.once('keydown', unlock);
-    scene.input.keyboard?.on('keydown-M', this.toggleMute, this);
+    const toggle = (): void => this.setMuted(!this.muted);
+    scene.input.keyboard?.on('keydown-M', toggle);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
-      scene.input.keyboard?.off('keydown-M', this.toggleMute, this),
+      scene.input.keyboard?.off('keydown-M', toggle),
     );
   }
 
@@ -46,8 +58,26 @@ class GameAudioController {
     return this.muted;
   }
 
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+    try {
+      window.localStorage.setItem('blue-hole-muted', String(muted));
+    } catch {
+      // Storage can be unavailable in private windows; the choice lasts the session.
+    }
+    if (this.master) this.master.gain.value = muted ? 0 : MASTER_VOLUME;
+  }
+
+  /** Silences everything while the game is paused or the page is hidden. */
+  setSuspended(suspended: boolean): void {
+    this.suspended = suspended;
+    if (!this.context) return;
+    if (suspended) void this.context.suspend();
+    else void this.context.resume();
+  }
+
   play(effect: SoundEffect): void {
-    if (!this.context || !this.master || this.muted) return;
+    if (!this.context || !this.master || this.muted || this.suspended) return;
     const patterns: Record<
       SoundEffect,
       Array<[number, number, OscillatorType]>
@@ -102,10 +132,10 @@ class GameAudioController {
     if (!this.context) {
       this.context = new AudioContext();
       this.master = this.context.createGain();
-      this.master.gain.value = this.muted ? 0 : 0.22;
+      this.master.gain.value = this.muted ? 0 : MASTER_VOLUME;
       this.master.connect(this.context.destination);
     }
-    void this.context.resume();
+    if (!this.suspended) void this.context.resume();
     this.restartTheme();
   }
 
@@ -121,8 +151,11 @@ class GameAudioController {
     this.step = 0;
     const theme = THEMES[this.theme];
     const playBeat = () => {
-      if (!this.context || this.muted) return;
-      const note = theme.notes[this.step % theme.notes.length]!;
+      if (!this.context || this.muted || this.suspended) return;
+      // Lift every fourth bar so the short loop does not repeat unchanged.
+      const bar = Math.floor(this.step / theme.notes.length);
+      const note =
+        theme.notes[this.step % theme.notes.length]! + (bar % 4 === 3 ? 5 : 0);
       this.tone(
         NOTE(note - 12),
         theme.beat / 900,
@@ -161,12 +194,6 @@ class GameAudioController {
     oscillator.connect(gain).connect(this.master);
     oscillator.start(start);
     oscillator.stop(start + duration);
-  }
-
-  private toggleMute(): void {
-    this.muted = !this.muted;
-    window.localStorage.setItem('blue-hole-muted', String(this.muted));
-    if (this.master) this.master.gain.value = this.muted ? 0 : 0.22;
   }
 }
 

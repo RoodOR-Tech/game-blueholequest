@@ -173,10 +173,7 @@ export class VictoryCelebrationScene extends Phaser.Scene {
       const hero = this.add
         .sprite(positions[index]!, 178, visual.texture, visual.frame)
         .setDepth(20);
-      hero.setScale(teamId === 'dad_paula' ? 0.105 : 0.13);
-      // Dad's source frames have different widths; keeping the known-good idle
-      // frame avoids a WebGL texture rectangle appearing during the group shot.
-      if (teamId !== 'dad_paula') hero.play(visual.idle);
+      hero.setScale(0.13).play(visual.idle);
       this.tweens.add({
         targets: hero,
         y: 174,
@@ -277,4 +274,3 @@ export class VictoryCelebrationScene extends Phaser.Scene {
     this.time.delayedCall(380, () => this.scene.start('blue-hole-hub'));
   }
 }
-

@@ -49,9 +49,11 @@ These decisions reconcile contradictions in GDD V3. They are defaults for planni
 
 ## D-008 — Internal rendering and UI
 
-**Proposal:** The world renders at 256 × 240 with nearest-neighbor scaling. HUD, menus, dialogue, and touch controls may render in a responsive overlay at device resolution.
+**Decision (approved):** The world is laid out on a 256 × 240 grid and drawn directly at a whole-number multiple of device pixels. Characters and text are rendered at that full resolution rather than enlarged from a 256 × 240 buffer. Touch controls and menus sit outside the picture in a responsive page layer.
 
-**Reason:** Pixel-art authenticity should not make text or controls inaccessible.
+**Reason:** Enlarging a low-resolution buffer blurred the text and broke up the illustrated character art. Whole-number scaling keeps pixels even, and full-resolution drawing keeps text and faces legible on phones.
+
+**Supersedes:** the original proposal to render the world at 256 × 240 with nearest-neighbor scaling.
 
 ## D-009 — Team rollout
 
