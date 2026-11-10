@@ -2,9 +2,12 @@
   color-scheme: dark;
   font-family: monospace;
   background: #08111d;
+  /* Control unit: one CSS pixel on a 400px-wide phone. Set by TouchControls.ts
+     from the viewport so controls stay finger-sized at any layout width. */
+  --u: 1;
   /* Space reserved for touch controls. Mirrors TouchControls.ts. */
-  --side-gutter: 170px;
-  --below-strip: 250px;
+  --side-gutter: calc(180px * var(--u));
+  --below-strip: calc(260px * var(--u));
 }
 
 * {
@@ -78,16 +81,16 @@ body[data-touch-layout='below'] .touch-controls {
 .touch-controls__directions,
 .touch-controls__actions {
   position: absolute;
-  --button: 64px;
+  --button: calc(70px * var(--u));
 }
 
 body[data-touch-layout='sides'] .touch-controls__directions,
 body[data-touch-layout='sides'] .touch-controls__actions {
   top: 50%;
-  width: calc(var(--side-gutter) - 14px);
-  height: min(82vh, 240px);
+  width: calc(var(--side-gutter) - 14px * var(--u));
+  height: min(86vh, calc(250px * var(--u)));
   transform: translateY(-50%);
-  --button: clamp(52px, 19vh, 62px);
+  --button: calc(66px * var(--u));
 }
 
 body[data-touch-layout='sides'] .touch-controls__directions {
@@ -101,9 +104,13 @@ body[data-touch-layout='sides'] .touch-controls__actions {
 body[data-touch-layout='below'] .touch-controls__directions,
 body[data-touch-layout='below'] .touch-controls__actions {
   bottom: calc(14px + env(safe-area-inset-bottom));
-  width: min(46vw, 200px);
-  height: calc(var(--below-strip) - 34px);
-  --button: clamp(56px, 16vw, 68px);
+  width: calc(204px * var(--u));
+  height: calc(var(--below-strip) - 38px * var(--u));
+  --button: calc(70px * var(--u));
+}
+
+body[data-touch-layout='below'] .touch-controls__actions {
+  width: calc(164px * var(--u));
 }
 
 body[data-touch-layout='below'] .touch-controls__directions {
@@ -119,7 +126,7 @@ body[data-touch-layout='below'] .touch-controls__actions {
   width: var(--button);
   height: var(--button);
   padding: 0;
-  border: 3px solid rgba(207, 233, 244, 0.92);
+  border: calc(3px * var(--u)) solid rgba(207, 233, 244, 0.92);
   border-radius: 50%;
   background: rgba(8, 17, 29, 0.72);
   color: #fff;
@@ -178,14 +185,14 @@ body[data-touch-layout='below'] .touch-controls__actions {
   top: calc(8px + env(safe-area-inset-top));
   right: calc(8px + env(safe-area-inset-right));
   z-index: 25;
-  width: 40px;
-  height: 40px;
+  width: calc(44px * var(--u));
+  height: calc(44px * var(--u));
   padding: 0;
   border: 2px solid rgba(207, 233, 244, 0.8);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--u));
   background: rgba(8, 17, 29, 0.78);
   color: #cfe9f4;
-  font: 700 16px / 1 monospace;
+  font: 700 calc(17px * var(--u)) / 1 monospace;
   letter-spacing: 2px;
   cursor: pointer;
   touch-action: manipulation;
@@ -195,7 +202,9 @@ body[data-touch-layout='below'] .game-menu-button {
   top: auto;
   right: auto;
   left: 50%;
-  bottom: calc(var(--below-strip) - 52px + env(safe-area-inset-bottom));
+  bottom: calc(
+    var(--below-strip) - 52px * var(--u) + env(safe-area-inset-bottom)
+  );
   transform: translateX(-50%);
 }
 
@@ -218,9 +227,9 @@ body[data-touch-layout='below'] .game-menu-button {
 .pause-menu__box {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: min(86vw, 320px);
-  padding: 20px;
+  gap: calc(10px * var(--u));
+  width: min(86vw, calc(320px * var(--u)));
+  padding: calc(20px * var(--u));
   border: 3px solid #f6d77a;
   border-radius: 6px;
   background: #08111d;
@@ -230,7 +239,7 @@ body[data-touch-layout='below'] .game-menu-button {
   margin: 0 0 6px;
   color: #73ddff;
   font:
-    700 22px / 1 'Arial Black',
+    700 calc(22px * var(--u)) / 1 'Arial Black',
     Arial,
     sans-serif;
   letter-spacing: 3px;
@@ -238,14 +247,14 @@ body[data-touch-layout='below'] .game-menu-button {
 }
 
 .pause-menu__button {
-  min-height: 48px;
-  padding: 10px 14px;
+  min-height: calc(48px * var(--u));
+  padding: calc(10px * var(--u)) calc(14px * var(--u));
   border: 2px solid #2d5d7a;
   border-radius: 4px;
   background: #0d202c;
   color: #fff;
   font:
-    700 15px / 1.2 'Arial Black',
+    700 calc(15px * var(--u)) / 1.2 'Arial Black',
     Arial,
     sans-serif;
   cursor: pointer;
