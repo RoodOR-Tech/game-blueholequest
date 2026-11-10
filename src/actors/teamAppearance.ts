@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { TeamId } from '../content/teams';
+import { playerVisual } from './familyAnimations';
 
 export interface TeamAppearance {
   readonly primary: number;
@@ -54,7 +55,90 @@ export function applyTeamAppearance(
   sprite.setTint(TEAM_APPEARANCES[teamId].primary);
 }
 
+const PORTRAIT_SOURCE_SIZE = 190;
+const PORTRAIT_SIZE = 20;
+const headCache = new Map<TeamId, { x: number; y: number } | null>();
+
+/** Finds the centre of a character's head in the first frame of their sheet. */
+function locateHead(
+  scene: Phaser.Scene,
+  teamId: TeamId,
+  texture: string,
+  frameName: string,
+): { x: number; y: number } | null {
+  const cached = headCache.get(teamId);
+  if (cached !== undefined) return cached;
+  let head: { x: number; y: number } | null = null;
+  const frame = scene.textures.get(texture).get(frameName);
+  const source = frame.source.image;
+  if (source instanceof HTMLCanvasElement) {
+    const width = frame.cutWidth;
+    const height = frame.cutHeight;
+    const pixels = source
+      .getContext('2d')
+      ?.getImageData(frame.cutX, frame.cutY, width, height).data;
+    if (pixels) {
+      const opaque = (x: number, y: number): boolean =>
+        (pixels[(y * width + x) * 4 + 3] ?? 0) > 0;
+      let top = -1;
+      for (let y = 0; y < height && top < 0; y += 1)
+        for (let x = 0; x < width; x += 1)
+          if (opaque(x, y)) {
+            top = y;
+            break;
+          }
+      if (top >= 0) {
+        let left = width;
+        let right = 0;
+        const bottom = Math.min(height, top + 150);
+        for (let y = top; y < bottom; y += 1)
+          for (let x = 0; x < width; x += 1)
+            if (opaque(x, y)) {
+              left = Math.min(left, x);
+              right = Math.max(right, x);
+            }
+        head = {
+          x: (left + right) / 2,
+          y: top + PORTRAIT_SOURCE_SIZE / 2 - 12,
+        };
+      }
+    }
+  }
+  headCache.set(teamId, head);
+  return head;
+}
+
+/** A team badge showing the lead character's face, with a drawn fallback. */
 export function drawTeamPortrait(
+  scene: Phaser.Scene,
+  teamId: TeamId,
+  x: number,
+  y: number,
+): Phaser.GameObjects.Container {
+  const look = TEAM_APPEARANCES[teamId];
+  const visual = playerVisual(teamId);
+  const head = locateHead(scene, teamId, visual.texture, visual.frame);
+  if (!head) return drawFallbackPortrait(scene, teamId, x, y);
+  const frame = scene.textures.get(visual.texture).get(visual.frame);
+  const half = PORTRAIT_SOURCE_SIZE / 2;
+  const backing = scene.add.graphics();
+  backing.fillStyle(0x091520).fillCircle(0, 0, 11);
+  backing.fillStyle(look.accent).fillCircle(0, 0, 10);
+  backing.fillStyle(look.primary, 0.55).fillCircle(0, 0, 8);
+  const face = scene.add
+    .image(0, 0, visual.texture, visual.frame)
+    .setCrop(
+      head.x - half,
+      head.y - half,
+      PORTRAIT_SOURCE_SIZE,
+      PORTRAIT_SOURCE_SIZE,
+    )
+    .setOrigin(head.x / frame.width, head.y / frame.height)
+    .setScale(PORTRAIT_SIZE / PORTRAIT_SOURCE_SIZE);
+  return scene.add.container(x, y, [backing, face]);
+}
+
+function drawFallbackPortrait(
   scene: Phaser.Scene,
   teamId: TeamId,
   x: number,

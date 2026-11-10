@@ -1,144 +1,169 @@
 import Phaser from 'phaser';
+import { WORLD_HEIGHT, WORLD_WIDTH } from '../app/display';
 import type { GameAction } from '../game/input/actions';
 import { PhaserInput } from '../game/input/PhaserInput';
-
-interface TouchButtonDefinition {
-  readonly action: GameAction;
-  readonly label: string;
-  readonly x: number;
-  readonly y: number;
-  readonly radius: number;
-}
+import { openPauseMenu } from './PauseMenu';
 
 export interface TouchControlActions {
   readonly primary: GameAction;
   readonly secondary: GameAction;
 }
 
-const DIRECTION_BUTTONS: readonly TouchButtonDefinition[] = [
-  { action: 'up', label: '▲', x: 38, y: 162, radius: 11 },
-  { action: 'left', label: '◀', x: 11, y: 190, radius: 11 },
-  { action: 'right', label: '▶', x: 65, y: 190, radius: 11 },
-  { action: 'down', label: '▼', x: 38, y: 218, radius: 11 },
+type ButtonRole = 'up' | 'down' | 'left' | 'right' | 'primary' | 'secondary';
+type TouchLayout = 'none' | 'sides' | 'below';
+
+interface Binding {
+  readonly input: PhaserInput;
+  readonly actions: TouchControlActions;
+}
+
+const DEFAULT_ACTIONS: TouchControlActions = {
+  primary: 'confirm',
+  secondary: 'cancel',
+};
+const BUTTONS: readonly { role: ButtonRole; label: string }[] = [
+  { role: 'up', label: '▲' },
+  { role: 'left', label: '◀' },
+  { role: 'right', label: '▶' },
+  { role: 'down', label: '▼' },
+  { role: 'primary', label: 'A' },
+  { role: 'secondary', label: 'B' },
 ];
+// Space reserved outside the picture, in CSS pixels. Mirrors style.css.
+const SIDE_GUTTER = 170;
+const BELOW_STRIP = 250;
 
-const TOUCH_BUTTON_DEPTH = 700;
-const LANDSCAPE_TOUCH_QUERY =
-  '(orientation: landscape) and (min-aspect-ratio: 3/2)';
+let overlay: HTMLDivElement | undefined;
+let binding: Binding | undefined;
+let touchDevice = false;
+const held = new Map<ButtonRole, GameAction>();
 
+function actionFor(role: ButtonRole): GameAction | undefined {
+  if (!binding) return undefined;
+  if (role === 'primary') return binding.actions.primary;
+  if (role === 'secondary') return binding.actions.secondary;
+  return role;
+}
+
+function releaseAll(): void {
+  held.forEach((action) => binding?.input.setVirtualAction(action, false));
+  held.clear();
+  overlay
+    ?.querySelectorAll('.is-pressed')
+    .forEach((button) => button.classList.remove('is-pressed'));
+}
+
+/** Picks whichever control placement leaves the larger picture. */
+function chooseLayout(): TouchLayout {
+  if (!touchDevice) return 'none';
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const sides = Math.min(
+    (width - SIDE_GUTTER * 2) / WORLD_WIDTH,
+    height / WORLD_HEIGHT,
+  );
+  const below = Math.min(
+    width / WORLD_WIDTH,
+    (height - BELOW_STRIP) / WORLD_HEIGHT,
+  );
+  return sides >= below ? 'sides' : 'below';
+}
+
+function refreshLayout(): void {
+  const layout = chooseLayout();
+  if (document.body.dataset.touchLayout === layout) return;
+  document.body.dataset.touchLayout = layout;
+  window.dispatchEvent(new Event('blue-hole-layout'));
+}
+
+function createOverlay(): HTMLDivElement {
+  const root = document.createElement('div');
+  root.className = 'touch-controls';
+  root.setAttribute('aria-label', 'Game controls');
+  const directions = document.createElement('div');
+  directions.className = 'touch-controls__directions';
+  const actions = document.createElement('div');
+  actions.className = 'touch-controls__actions';
+
+  BUTTONS.forEach(({ role, label }) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `touch-controls__button touch-controls__button--${role}`;
+    button.textContent = label;
+    button.setAttribute('aria-label', role);
+    const release = (): void => {
+      const action = held.get(role);
+      if (action) binding?.input.setVirtualAction(action, false);
+      held.delete(role);
+      button.classList.remove('is-pressed');
+    };
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      const action = actionFor(role);
+      if (!action || !binding) return;
+      button.setPointerCapture(event.pointerId);
+      held.set(role, action);
+      binding.input.setVirtualAction(action, true);
+      button.classList.add('is-pressed');
+    });
+    button.addEventListener('pointerup', release);
+    button.addEventListener('pointercancel', release);
+    button.addEventListener('lostpointercapture', release);
+    button.addEventListener('contextmenu', (event) => event.preventDefault());
+    (role === 'primary' || role === 'secondary' ? actions : directions).append(
+      button,
+    );
+  });
+
+  const menu = document.createElement('button');
+  menu.type = 'button';
+  menu.className = 'game-menu-button';
+  menu.textContent = 'II';
+  menu.setAttribute('aria-label', 'Pause and settings');
+  menu.addEventListener('click', () => openPauseMenu());
+
+  root.append(directions, actions);
+  document.body.append(root, menu);
+  return root;
+}
+
+/** Creates the page-level controls once; they sit outside the game picture. */
+export function installTouchControls(): void {
+  if (overlay) return;
+  overlay = createOverlay();
+  touchDevice = window.matchMedia('(pointer: coarse)').matches;
+  window.addEventListener(
+    'touchstart',
+    () => {
+      if (touchDevice) return;
+      touchDevice = true;
+      refreshLayout();
+    },
+    { passive: true },
+  );
+  window.addEventListener('resize', refreshLayout);
+  window.addEventListener('orientationchange', refreshLayout);
+  window.addEventListener('blur', releaseAll);
+  refreshLayout();
+}
+
+/** Routes the on-screen buttons to one scene's input for that scene's lifetime. */
 export class TouchControls {
   constructor(
     scene: Phaser.Scene,
     input: PhaserInput,
-    actions: TouchControlActions = { primary: 'confirm', secondary: 'cancel' },
+    actions: TouchControlActions = DEFAULT_ACTIONS,
   ) {
-    const buttons: readonly TouchButtonDefinition[] = [
-      ...DIRECTION_BUTTONS,
-      { action: actions.primary, label: 'A', x: 228, y: 185, radius: 17 },
-      { action: actions.secondary, label: 'B', x: 192, y: 211, radius: 15 },
-    ];
-    const canvasControls: Array<
-      Phaser.GameObjects.Arc | Phaser.GameObjects.Text
-    > = [];
-    buttons.forEach((definition) => {
-      const button = scene.add
-        .circle(definition.x, definition.y, definition.radius, 0x08111d, 0.48)
-        .setStrokeStyle(1, 0xcfe9f4, 0.75)
-        .setScrollFactor(0)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(TOUCH_BUTTON_DEPTH);
-      const label = scene.add
-        .text(definition.x, definition.y, definition.label, {
-          color: '#ffffff',
-          fontFamily: 'monospace',
-          fontSize: `${definition.radius}px`,
-          fontStyle: 'bold',
-        })
-        .setOrigin(0.5)
-        .setAlpha(0.8)
-        .setScrollFactor(0)
-        .setDepth(TOUCH_BUTTON_DEPTH + 1);
-      canvasControls.push(button, label);
-
-      const release = (): void => {
-        input.setVirtualAction(definition.action, false);
-        button.setFillStyle(0x08111d, 0.48);
-      };
-      button.on('pointerdown', () => {
-        input.setVirtualAction(definition.action, true);
-        button.setFillStyle(0x2d789b, 0.8);
-      });
-      button.on('pointerup', release);
-      button.on('pointerout', release);
-      button.on('pointercancel', release);
-      label.disableInteractive();
-    });
-
-    const landscapeQuery = window.matchMedia(LANDSCAPE_TOUCH_QUERY);
-    const overlay = this.createLandscapeOverlay(input, buttons);
-    const updateLayout = (): void => {
-      const useSideControls = landscapeQuery.matches;
-      canvasControls.forEach((control) => control.setVisible(!useSideControls));
-      overlay.classList.toggle('is-visible', useSideControls);
-    };
-    landscapeQuery.addEventListener('change', updateLayout);
-    updateLayout();
-
+    installTouchControls();
+    releaseAll();
+    const own: Binding = { input, actions };
+    binding = own;
+    overlay?.classList.add('is-bound');
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      landscapeQuery.removeEventListener('change', updateLayout);
-      overlay.remove();
+      if (binding !== own) return;
+      releaseAll();
+      binding = undefined;
+      overlay?.classList.remove('is-bound');
     });
-  }
-
-  private createLandscapeOverlay(
-    input: PhaserInput,
-    buttons: readonly TouchButtonDefinition[],
-  ): HTMLDivElement {
-    const overlay = document.createElement('div');
-    overlay.className = 'landscape-touch-controls';
-    overlay.setAttribute('aria-label', 'Game controls');
-
-    const directions = document.createElement('div');
-    directions.className = 'landscape-touch-controls__directions';
-    const actions = document.createElement('div');
-    actions.className = 'landscape-touch-controls__actions';
-
-    buttons.forEach((definition, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      const role =
-        index < DIRECTION_BUTTONS.length
-          ? 'direction'
-          : index === DIRECTION_BUTTONS.length
-            ? 'primary'
-            : 'secondary';
-      button.className = `landscape-touch-controls__button landscape-touch-controls__button--${definition.action} landscape-touch-controls__button--${role}`;
-      button.textContent = definition.label;
-      button.setAttribute('aria-label', definition.action);
-
-      const release = (): void => {
-        input.setVirtualAction(definition.action, false);
-        button.classList.remove('is-pressed');
-      };
-      button.addEventListener('pointerdown', (event) => {
-        event.preventDefault();
-        button.setPointerCapture(event.pointerId);
-        input.setVirtualAction(definition.action, true);
-        button.classList.add('is-pressed');
-      });
-      button.addEventListener('pointerup', release);
-      button.addEventListener('pointercancel', release);
-      button.addEventListener('lostpointercapture', release);
-
-      const isDirection = DIRECTION_BUTTONS.some(
-        ({ action }) => action === definition.action,
-      );
-      (isDirection ? directions : actions).append(button);
-    });
-
-    overlay.append(directions, actions);
-    document.body.append(overlay);
-    return overlay;
   }
 }
-

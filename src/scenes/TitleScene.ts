@@ -3,10 +3,11 @@ import { gameAudio } from '../audio/GameAudio';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { sceneForCheckpoint } from '../game/progression/checkpoints';
-import { sanitizeGamepads } from '../game/input/PhaserInput';
+import { PhaserInput, sanitizeGamepads } from '../game/input/PhaserInput';
+import { TouchControls } from '../ui/TouchControls';
 import { HighScoreRepository } from '../game/saves/highScores';
 import { getTeam } from '../content/teams';
-import { sharpenSceneText } from '../ui/textClarity';
+import { sharpenSceneText } from '../app/display';
 
 const COLORS = {
   ocean: 0x176eb0,
@@ -23,9 +24,8 @@ export class TitleScene extends Phaser.Scene {
   private options: Phaser.GameObjects.Text[] = [];
   private status?: Phaser.GameObjects.Text;
   private confirmingNewGame = false;
-  private readonly selectPrevious = () => this.moveSelection(-1);
-  private readonly selectNext = () => this.moveSelection(1);
-  private readonly activate = () => this.activateSelection();
+  private controls?: PhaserInput;
+  private inputReady = false;
   private readonly repository = new SaveRepository(window.localStorage);
   private readonly highScores = new HighScoreRepository(window.localStorage);
 
@@ -40,20 +40,24 @@ export class TitleScene extends Phaser.Scene {
     this.drawHighScores();
     this.createMenu();
     sharpenSceneText(this);
-    this.input.keyboard?.on('keydown-UP', this.selectPrevious);
-    this.input.keyboard?.on('keydown-W', this.selectPrevious);
-    this.input.keyboard?.on('keydown-DOWN', this.selectNext);
-    this.input.keyboard?.on('keydown-S', this.selectNext);
-    this.input.keyboard?.on('keydown-ENTER', this.activate);
-    this.input.keyboard?.on('keydown-SPACE', this.activate);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.input.keyboard?.off('keydown-UP', this.selectPrevious);
-      this.input.keyboard?.off('keydown-W', this.selectPrevious);
-      this.input.keyboard?.off('keydown-DOWN', this.selectNext);
-      this.input.keyboard?.off('keydown-S', this.selectNext);
-      this.input.keyboard?.off('keydown-ENTER', this.activate);
-      this.input.keyboard?.off('keydown-SPACE', this.activate);
+    this.controls = new PhaserInput(this);
+    new TouchControls(this, this.controls);
+    // Ignore a button still held from the previous screen.
+    this.inputReady = false;
+    this.time.delayedCall(200, () => {
+      this.inputReady = true;
     });
+  }
+
+  update(): void {
+    if (!this.controls) return;
+    this.controls.update(this.input.gamepad?.getPad(0));
+    if (!this.inputReady) return;
+    const actions = this.controls.actions;
+    if (actions.get('up').pressed) this.moveSelection(-1);
+    if (actions.get('down').pressed) this.moveSelection(1);
+    if (actions.get('confirm').pressed || actions.get('jump').pressed)
+      this.activateSelection();
   }
 
   private createMenu(): void {
@@ -109,6 +113,7 @@ export class TitleScene extends Phaser.Scene {
       this.options.length,
     );
     this.confirmingNewGame = false;
+    gameAudio.play('select');
     this.renderSelection();
   }
 
@@ -304,4 +309,3 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
   }
 }
-

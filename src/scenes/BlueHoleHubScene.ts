@@ -26,9 +26,12 @@ import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
 import { HighScoreRepository } from '../game/saves/highScores';
-import { sharpenSceneText } from '../ui/textClarity';
+import { sharpenSceneText } from '../app/display';
+import { StatusHud } from '../ui/StatusHud';
 
 const PLAYER_SPEED = 58;
+// Distance from a character sprite's centre down to their feet.
+const FEET_OFFSET = 38;
 const INTERACTION_DISTANCE = 31;
 const RELIC_COLORS = [
   0xf2c94c, 0x7ed6ef, 0xd68b32, 0x58b87a, 0xd6d1c7,
@@ -52,7 +55,11 @@ export class BlueHoleHubScene extends Phaser.Scene {
   private player?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private prompt?: Phaser.GameObjects.Text;
   private message?: Phaser.GameObjects.Text;
-  private hud?: Phaser.GameObjects.Text;
+  private hud?: StatusHud;
+  private messageTimer?: Phaser.Time.TimerEvent;
+  private shadow?: Phaser.GameObjects.Ellipse;
+  private chill?: Phaser.GameObjects.Rectangle;
+  private flame?: Phaser.GameObjects.Graphics;
   private mantleSockets: Phaser.GameObjects.Arc[] = [];
   private homecomingArtifact?: ReturnType<typeof pendingHomecomingArtifact>;
   private postGameMode = false;
@@ -133,6 +140,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
       direction.y * PLAYER_SPEED,
     );
     if (horizontal !== 0) this.player.setFlipX(horizontal < 0);
+    this.shadow?.setPosition(this.player.x, this.player.y + FEET_OFFSET);
     const visual = playerVisual(this.save.activeTeamId);
     this.player.play(
       direction.lengthSq() > 0 ? visual.walk : visual.idle,
@@ -147,8 +155,8 @@ export class BlueHoleHubScene extends Phaser.Scene {
 
   private drawRoom(): void {
     const graphics = this.add.graphics();
-    graphics.fillStyle(0x4c2d20).fillRect(0, 0, 256, 38);
-    graphics.fillStyle(0x8f6543).fillRect(0, 38, 256, 126);
+    graphics.fillStyle(0x4c2d20).fillRect(0, 0, 256, 42);
+    graphics.fillStyle(0x8f6543).fillRect(0, 42, 256, 122);
     graphics.fillStyle(0x5b3929).fillRect(0, 164, 256, 76);
     graphics.lineStyle(1, 0x79513b);
     for (let y = 171; y < 240; y += 12) graphics.lineBetween(0, y, 256, y);
@@ -171,8 +179,16 @@ export class BlueHoleHubScene extends Phaser.Scene {
 
     graphics.fillStyle(0x633627).fillRect(176, 78, 66, 79);
     graphics.fillStyle(0x1b1515).fillRoundedRect(187, 111, 44, 43, 14);
-    graphics.fillStyle(0xe06023).fillTriangle(199, 151, 209, 121, 218, 151);
-    graphics.fillStyle(0xffc14f).fillTriangle(207, 151, 215, 131, 224, 151);
+    // Cold embers; the flame itself grows as relics come home.
+    graphics.fillStyle(0x3b2a24).fillRect(196, 148, 26, 4);
+    graphics
+      .fillStyle(0x6b2f1c)
+      .fillRect(201, 146, 5, 3)
+      .fillRect(212, 147, 6, 2);
+    this.flame = this.add.graphics({ x: 209, y: 151 });
+    this.flame.fillStyle(0xe06023).fillTriangle(-10, 0, 0, -30, 9, 0);
+    this.flame.fillStyle(0xffc14f).fillTriangle(-2, 0, 6, -20, 15, 0);
+    this.flame.setVisible(false);
     graphics.fillStyle(0x3a2119).fillRect(169, 74, 80, 7);
 
     // Beach-access exit mat stays clear of the centered dialogue panel.
@@ -188,11 +204,15 @@ export class BlueHoleHubScene extends Phaser.Scene {
 
     this.mantleSockets = RELIC_IDS.map((_, index) =>
       this.add
-        .circle(183 + index * 13, 70, 4, 0x10161c)
+        .circle(183 + index * 13, 68, 5, 0x10161c)
         .setStrokeStyle(1, 0xd9c69a),
     );
+    // A cool wash over the room that lifts as the hearth warms up.
+    this.chill = this.add
+      .rectangle(128, 141, 256, 198, 0x1b3f73, 0)
+      .setDepth(50);
 
-    this.add.text(7, 8, 'THE BLUE HOLE • ROCKAWAY BEACH', {
+    this.add.text(7, 6, 'THE BLUE HOLE • ROCKAWAY BEACH', {
       color: '#f6d77a',
       fontFamily: 'monospace',
       fontSize: '8px',
@@ -202,6 +222,14 @@ export class BlueHoleHubScene extends Phaser.Scene {
 
   private createPlayer(): void {
     if (!this.save) return;
+    this.shadow = this.add.ellipse(
+      128,
+      190 + FEET_OFFSET,
+      26,
+      7,
+      0x000000,
+      0.3,
+    );
     const visual = playerVisual(this.save.activeTeamId);
     const player = this.physics.add.sprite(
       128,
@@ -215,13 +243,9 @@ export class BlueHoleHubScene extends Phaser.Scene {
   }
 
   private createInterface(): void {
-    this.hud = this.add.text(7, 21, '', {
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      fontSize: '7px',
-    });
+    this.hud = new StatusHud(this, 7, 18);
     this.prompt = this.add
-      .text(128, 218, 'ENTER / A: INTERACT', {
+      .text(128, 229, 'ENTER / A: INTERACT', {
         backgroundColor: '#08111ddd',
         color: '#ffffff',
         fontFamily: 'monospace',
@@ -231,7 +255,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setVisible(false);
     this.message = this.add
-      .text(128, 203, 'WELCOME HOME. THE HEARTH AWAITS FIVE RELICS.', {
+      .text(128, 196, '', {
         align: 'center',
         backgroundColor: '#08111dee',
         color: '#f6d77a',
@@ -241,7 +265,21 @@ export class BlueHoleHubScene extends Phaser.Scene {
         padding: { x: 8, y: 6 },
         wordWrap: { width: 220, useAdvancedWrap: true },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(200)
+      .setVisible(false);
+    this.prompt.setDepth(200);
+    this.showMessage('WELCOME HOME. THE HEARTH AWAITS FIVE RELICS.');
+  }
+
+  /** Shows a message briefly so it never sits over the room permanently. */
+  private showMessage(text: string, duration = 4200): void {
+    if (!this.message) return;
+    this.message.setText(text).setVisible(true);
+    this.messageTimer?.remove();
+    this.messageTimer = this.time.delayedCall(duration, () =>
+      this.message?.setVisible(false),
+    );
   }
 
   private nearestFixture(): HubFixture | undefined {
@@ -260,6 +298,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
 
   private interact(id: HubFixture['id']): void {
     if (!this.save || !this.message) return;
+    gameAudio.play('confirm');
     if (id === 'exit') {
       if (recoveredRelicCount(this.save.relics) === RELIC_IDS.length) {
         this.scene.start('victory-celebration');
@@ -287,9 +326,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
         savedAt: new Date().toISOString(),
       };
       this.repository.save(this.save);
-      this.message.setText(
-        'FRIDGE CHECKED • HEALTH & MAGIC RESTORED • GAME SAVED',
-      );
+      this.showMessage('FRIDGE CHECKED • HEALTH & MAGIC RESTORED • GAME SAVED');
       this.cameras.main.flash(130, 140, 220, 255, false);
       this.refreshHud();
       return;
@@ -302,27 +339,37 @@ export class BlueHoleHubScene extends Phaser.Scene {
       );
       this.repository.save(this.save);
       const count = foundBuddaCount(this.save);
-      this.message.setText(
+      this.showMessage(
         `BUDDA THE GINGER CAT\n“${BUDDA_ENCOUNTERS.rockaway.line}”\nREWARD: ${BUDDA_ENCOUNTERS.rockaway.reward}  •  FOUND ${count}/6`,
+        7000,
       );
       this.refreshHud();
       return;
     }
 
     const count = recoveredRelicCount(this.save.relics);
-    this.message.setText(
+    this.showMessage(
       count === RELIC_IDS.length
         ? 'ALL FIVE ARTIFACTS RESTORED • THE HOLIDAY HEARTH BURNS BRIGHT!'
-        : `THE HEARTH IS COLD • ${count} / ${RELIC_IDS.length} ARTIFACTS RESTORED`,
+        : count === 0
+          ? `THE HEARTH IS COLD • 0 / ${RELIC_IDS.length} ARTIFACTS RESTORED`
+          : `THE HEARTH IS WARMING • ${count} / ${RELIC_IDS.length} ARTIFACTS RESTORED`,
     );
   }
 
   private refreshHud(): void {
     if (!this.save || !this.hud) return;
     const team = getTeam(this.save.activeTeamId);
-    this.hud.setText(
-      `${team.displayName.toUpperCase()}  SCORE ${this.save.stats.score}\nHP ${this.save.resources.life}/${this.save.resources.maxLife}  LIVES ${this.save.resources.lives}/${this.save.resources.maxLives}  MAGIC ${this.save.resources.magic}/${this.save.resources.maxMagic}`,
-    );
+    this.hud.update({
+      title: team.displayName.toUpperCase(),
+      score: this.save.stats.score,
+      life: this.save.resources.life,
+      maxLife: this.save.resources.maxLife,
+      magic: this.save.resources.magic,
+      maxMagic: this.save.resources.maxMagic,
+      lives: this.save.resources.lives,
+      maxLives: this.save.resources.maxLives,
+    });
   }
 
   private refreshMantle(): void {
@@ -334,6 +381,22 @@ export class BlueHoleHubScene extends Phaser.Scene {
         id && recovered.has(id) ? (RELIC_COLORS[index] ?? 0x74d7f2) : 0x10161c,
       );
     });
+    // Each relic warms the room and feeds the fire.
+    const warmth = recoveredRelicCount(this.save.relics) / RELIC_IDS.length;
+    this.chill?.setFillStyle(0x1b3f73, 0.3 * (1 - warmth));
+    if (this.flame) {
+      this.tweens.killTweensOf(this.flame);
+      this.flame.setVisible(warmth > 0).setScale(0.35 + 0.65 * warmth);
+      if (warmth > 0)
+        this.tweens.add({
+          targets: this.flame,
+          scaleY: this.flame.scaleY * 1.12,
+          duration: 260,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+    }
   }
 
   private presentHomecoming(): void {
@@ -354,12 +417,13 @@ export class BlueHoleHubScene extends Phaser.Scene {
     this.cameras.main.flash(420, 255, 218, 112, false);
     const allRecovered =
       recoveredRelicCount(this.save!.relics) === RELIC_IDS.length;
-    this.message.setText(
+    this.showMessage(
       `WELCOME HOME, HERO!\n${this.homecomingArtifact.artifactName} NOW RESTS ON THE MANTEL.\nTHE FAMILY CHEERS • HEALTH & MAGIC RESTORED${
         allRecovered
           ? '\nALL FIVE ARTIFACTS ARE HOME • HEAD OUTSIDE FOR THE PARTY!'
           : '\nWHEN READY, HEAD OUT FOR THE NEXT LOCATION.'
       }`,
+      9000,
     );
   }
 
@@ -481,4 +545,3 @@ export class BlueHoleHubScene extends Phaser.Scene {
     sharpenSceneText(this);
   }
 }
-

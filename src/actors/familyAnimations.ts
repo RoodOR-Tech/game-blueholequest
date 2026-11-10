@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 import type { TeamId } from '../content/teams';
-import { DAD_SPRITE_SCALE, DAD_TEXTURE_KEY } from './dadAnimations';
+import {
+  DAD_SPRITE_SCALE,
+  DAD_TEXTURE_KEY,
+  SMOOTH_FILTER,
+} from './dadAnimations';
 
 type IllustratedTeamId = Exclude<TeamId, 'dad_paula'>;
 
@@ -147,6 +151,8 @@ export function cleanConnectedBackground(
   packedImage.data.set(packed.pixels);
   canvasTexture.context.putImageData(packedImage, 0, 0);
   canvasTexture.refresh();
+  // The sheets are detailed illustrations drawn well below full size.
+  canvasTexture.setFilter(SMOOTH_FILTER);
   scene.textures.remove(sourceKey);
   return canvasTexture;
 }

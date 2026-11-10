@@ -1,19 +1,14 @@
 import Phaser from 'phaser';
+import { WORLD_HEIGHT, WORLD_WIDTH } from './display';
 import { BootScene } from '../scenes/BootScene';
 import { BlueHoleHubScene } from '../scenes/BlueHoleHubScene';
-import { FoundryTestScene } from '../scenes/FoundryTestScene';
-import { ForestQuestScene } from '../scenes/ForestQuestScene';
 import { Highway26Scene } from '../scenes/Highway26Scene';
-import { LodgeQuestScene } from '../scenes/LodgeQuestScene';
 import { LocationBossScene } from '../scenes/LocationBossScene';
 import { LocationArrivalScene } from '../scenes/LocationArrivalScene';
 import { RouteActionScene } from '../scenes/RouteActionScene';
 import { TeamSelectScene } from '../scenes/TeamSelectScene';
 import { TitleScene } from '../scenes/TitleScene';
 import { VictoryCelebrationScene } from '../scenes/VictoryCelebrationScene';
-
-export const WORLD_WIDTH = 256;
-export const WORLD_HEIGHT = 240;
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -30,21 +25,25 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     BlueHoleHubScene,
     Highway26Scene,
     LocationArrivalScene,
-    ForestQuestScene,
-    LodgeQuestScene,
-    FoundryTestScene,
     LocationBossScene,
     RouteActionScene,
     VictoryCelebrationScene,
   ],
   physics: {
     default: 'arcade',
-    arcade: { gravity: { x: 0, y: 0 }, debug: false },
+    arcade: {
+      gravity: { x: 0, y: 0 },
+      debug: false,
+      // World bounds stay in world pixels regardless of the render scale.
+      width: WORLD_WIDTH,
+      height: WORLD_HEIGHT,
+    },
   },
   input: { gamepad: true },
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    // installDisplay sizes the canvas to a whole number of device pixels.
+    mode: Phaser.Scale.NONE,
+    autoCenter: Phaser.Scale.NO_CENTER,
     width: WORLD_WIDTH,
     height: WORLD_HEIGHT,
   },

@@ -1,13 +1,7 @@
 import type { SaveData } from '../saves/schema';
 import { bossLocationForCheckpoint } from './bossLocations';
 
-export type CheckpointScene =
-  | 'blue-hole-hub'
-  | 'highway-26'
-  | 'forest-quest'
-  | 'lodge-quest'
-  | 'foundry-test'
-  | 'location-boss';
+export type CheckpointScene = 'blue-hole-hub' | 'highway-26' | 'location-boss';
 
 export const CHECKPOINTS = {
   home: 'rockaway_blue_hole',
@@ -28,8 +22,6 @@ export function saveAtCheckpoint(
 export function sceneForCheckpoint(checkpointId: string): CheckpointScene {
   if (checkpointId === CHECKPOINTS.route) return 'highway-26';
   if (bossLocationForCheckpoint(checkpointId)) return 'location-boss';
-  if (checkpointId === CHECKPOINTS.forest) return 'forest-quest';
-  if (checkpointId === CHECKPOINTS.lodge) return 'lodge-quest';
-  if (checkpointId === CHECKPOINTS.foundry) return 'foundry-test';
+  // Saves from the retired forest, lodge and foundry prototypes resume at home.
   return 'blue-hole-hub';
 }

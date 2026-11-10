@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createNewSave } from './schema';
-import { SaveRepository, type StorageAdapter } from './repository';
+import { SAVE_KEY, SaveRepository, type StorageAdapter } from './repository';
 
 class MemoryStorage implements StorageAdapter {
   private readonly values = new Map<string, string>();
@@ -93,6 +93,21 @@ describe('SaveRepository', () => {
       relics: ['crystal_hillsboro_west'],
     });
     expect(repository.load()?.checkpointId).toBe('connected_quest_route');
-    expect(repository.load()?.relics).toEqual(['relic_crystal_hound']);
+    expect(repository.load()?.relics).toEqual(['relic_golden_thumb']);
+  });
+
+  it('keeps the same location complete when relics move to match the design', () => {
+    const storage = new MemoryStorage();
+    const save = createNewSave('dad_paula');
+    storage.setItem(
+      SAVE_KEY,
+      JSON.stringify({ ...save, flags: {}, relics: ['relic_crystal_hound'] }),
+    );
+    const repository = new SaveRepository(storage);
+    const migrated = repository.load()!;
+    // The Hound used to come from Hillsboro West, which now awards the Thumb.
+    expect(migrated.relics).toEqual(['relic_golden_thumb']);
+    repository.save(migrated);
+    expect(repository.load()?.relics).toEqual(['relic_golden_thumb']);
   });
 });

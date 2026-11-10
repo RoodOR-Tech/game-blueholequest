@@ -19,6 +19,8 @@ import {
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { addScore, SCORE_VALUES } from '../game/progression/scoring';
+import { requestPauseMenu, setPauseLeaveOption } from '../ui/PauseMenu';
+import { BossBar, StatusHud } from '../ui/StatusHud';
 import { TouchControls } from '../ui/TouchControls';
 
 const MOVE_SPEED = 68;
@@ -35,7 +37,9 @@ export class LocationBossScene extends Phaser.Scene {
   private artifact?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private projectiles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
   private bossHealth: HealthState = { current: 1, maximum: 1 };
-  private hud?: Phaser.GameObjects.Text;
+  private hud?: StatusHud;
+  private bossBar?: BossBar;
+  private shadow?: Phaser.GameObjects.Ellipse;
   private message?: Phaser.GameObjects.Text;
   private facing = new Phaser.Math.Vector2(1, 0);
   private nextAttackAt = 0;
@@ -79,8 +83,17 @@ export class LocationBossScene extends Phaser.Scene {
     this.controls = new PhaserInput(this);
     new TouchControls(this, this.controls, {
       primary: 'attack',
-      secondary: 'cancel',
+      secondary: 'attack',
     });
+    setPauseLeaveOption({
+      label: 'RETREAT TO THE MAP',
+      run: () => this.scene.start('highway-26'),
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+      setPauseLeaveOption(undefined),
+    );
+    this.shadow = this.add.ellipse(45, 177 + 38, 26, 7, 0x000000, 0.3);
+    this.add.ellipse(205, 172, 44, 9, 0x000000, 0.3);
     const visual = playerVisual(this.save.activeTeamId);
     this.player = this.physics.add.sprite(
       45,
@@ -142,6 +155,9 @@ export class LocationBossScene extends Phaser.Scene {
     const visual = playerVisual(this.save.activeTeamId);
     this.player.setVelocity(movement.x * MOVE_SPEED, movement.y * MOVE_SPEED);
     this.player.y = Phaser.Math.Clamp(this.player.y, 83, 211);
+    this.shadow?.setPosition(this.player.x, this.player.y + 38);
+    // A steady fade shows the brief safety window after a hit.
+    this.player.setAlpha(time < this.invulnerableUntil ? 0.55 : 1);
     if (movement.lengthSq() > 0) {
       this.facing.copy(movement);
       if (x !== 0) this.player.setFlipX(x < 0);
@@ -157,8 +173,8 @@ export class LocationBossScene extends Phaser.Scene {
     if (time >= this.nextBossAttackAt && this.boss?.active)
       this.bossAttack(time);
     this.updateProjectiles(time);
-    if (!this.bossDefeated && this.controls.actions.get('cancel').pressed)
-      this.scene.start('highway-26');
+    // Leaving mid-fight is a deliberate choice made from the pause menu.
+    if (this.controls.actions.get('pause').pressed) requestPauseMenu();
   }
 
   private resetEncounter(): void {
@@ -522,11 +538,15 @@ export class LocationBossScene extends Phaser.Scene {
   }
 
   private createHud(): void {
-    this.hud = this.add.text(7, 7, '', {
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      fontSize: '7px',
-    });
+    this.hud = new StatusHud(this, 7, 6);
+    this.bossBar = new BossBar(
+      this,
+      150,
+      20,
+      98,
+      this.location.bossName,
+      this.location.color,
+    );
     this.message = this.add
       .text(128, 55, '', {
         align: 'center',
@@ -542,8 +562,16 @@ export class LocationBossScene extends Phaser.Scene {
 
   private refreshHud(): void {
     if (!this.save) return;
-    this.hud?.setText(
-      `${this.location.label} • HP ${this.save.resources.life}/${this.save.resources.maxLife} • LIVES ${this.save.resources.lives}/${this.save.resources.maxLives} • BOSS ${this.bossHealth.current}/${this.bossHealth.maximum}`,
+    this.hud?.update({
+      title: this.location.label,
+      life: this.save.resources.life,
+      maxLife: this.save.resources.maxLife,
+      lives: this.save.resources.lives,
+      maxLives: this.save.resources.maxLives,
+    });
+    this.bossBar?.update(
+      this.bossDefeated ? 0 : this.bossHealth.current,
+      this.bossHealth.maximum,
     );
   }
 
@@ -599,10 +627,23 @@ export class LocationBossScene extends Phaser.Scene {
     g.lineStyle(1, this.location.color, 0.42);
     for (let x = 0; x < 256; x += 24) g.lineBetween(x, 70, x, 240);
     for (let y = 70; y < 240; y += 24) g.lineBetween(0, y, 256, y);
-    this.add.text(7, 25, 'MOVE: D-PAD • ATTACK: A / X • B / ESC: LEAVE', {
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      fontSize: '6px',
+    const legend = this.add.text(
+      7,
+      34,
+      'MOVE: D-PAD • ATTACK: A / B / X • PAUSE: P',
+      {
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        fontSize: '6px',
+      },
+    );
+    // The legend is a reminder, not a permanent fixture.
+    this.tweens.add({
+      targets: legend,
+      alpha: 0,
+      delay: 5000,
+      duration: 600,
+      onComplete: () => legend.destroy(),
     });
   }
 
@@ -754,7 +795,7 @@ export class LocationBossScene extends Phaser.Scene {
     }
     if (!this.textures.exists('location-artifact')) {
       const artifact = this.add.graphics();
-      if (this.location.id === 'hillsboro_west') {
+      if (this.location.id === 'hillsboro_east') {
         artifact.fillStyle(0x7de4ff).fillTriangle(10, 1, 18, 10, 15, 21);
         artifact.fillTriangle(10, 1, 2, 10, 5, 21);
         artifact
@@ -762,7 +803,7 @@ export class LocationBossScene extends Phaser.Scene {
           .fillRect(5, 15, 4, 7)
           .fillRect(13, 15, 4, 7);
         artifact.fillStyle(0xffffff).fillCircle(7, 9, 2).fillCircle(13, 9, 2);
-      } else if (this.location.id === 'hillsboro_east') {
+      } else if (this.location.id === 'hillsboro_west') {
         artifact.fillStyle(0xf2c84b).fillRoundedRect(7, 2, 7, 21, 3);
         artifact.fillCircle(5, 8, 4).fillCircle(16, 8, 4);
         artifact.lineStyle(2, 0xffefaa).strokeRoundedRect(7, 2, 7, 21, 3);

@@ -4,6 +4,9 @@ export const DAD_TEXTURE_KEY = 'dad-sprites-v1';
 export const DAD_SPRITE_PATH = 'assets/sprites/dad-sprites-v1.png';
 // Large enough to read facial detail and body motion against the room-scale art.
 export const DAD_SPRITE_SCALE = 0.16;
+// Phaser.Textures.FilterMode.LINEAR, kept numeric so this module loads in tests
+// without a browser. Detailed illustrations are smoothed when drawn small.
+export const SMOOTH_FILTER = 0 as Phaser.Textures.FilterMode;
 
 const FRAMES = [
   { name: 'dad-idle-0', x: 0, width: 270 },
@@ -18,6 +21,7 @@ const FRAMES = [
 
 export function registerDadAnimations(scene: Phaser.Scene): void {
   const texture = scene.textures.get(DAD_TEXTURE_KEY);
+  texture.setFilter(SMOOTH_FILTER);
   FRAMES.forEach((frame) => {
     if (!texture.has(frame.name))
       texture.add(frame.name, 0, frame.x, 0, frame.width, 724);

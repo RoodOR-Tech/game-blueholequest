@@ -1,6 +1,8 @@
 import { getTeam, isTeamId, type TeamId } from '../../content/teams';
 
 export const SAVE_VERSION = 1 as const;
+/** Marks saves whose relics match the design document's locations. */
+export const RELIC_ORDER_FLAG = 'relic_order_matches_design';
 
 export interface SaveDataV1 {
   readonly version: typeof SAVE_VERSION;
@@ -56,7 +58,7 @@ export function createNewSave(activeTeamId: TeamId): SaveDataV1 {
     spells: [],
     relics: [],
     inventory: ['key_item_lantern'],
-    flags: {},
+    flags: { [RELIC_ORDER_FLAG]: true },
     savedAt: new Date().toISOString(),
   };
 }
@@ -68,21 +70,34 @@ export function normalizeSaveData(value: unknown): SaveData | null {
     maxLives?: number;
   };
   const defeatedBossCheckpoints: Readonly<Record<string, string>> = {
-    hillsboro_west_boss_entry: 'relic_crystal_hound',
-    hillsboro_east_boss_entry: 'relic_golden_thumb',
+    hillsboro_west_boss_entry: 'relic_golden_thumb',
+    hillsboro_east_boss_entry: 'relic_crystal_hound',
     milwaukie_boss_entry: 'relic_amber_stein',
     walla_walla_boss_entry: 'relic_emerald_leaf',
     bend_boss_entry: 'relic_marble_mountain',
   };
   const crystalToArtifact: Readonly<Record<string, string>> = {
-    crystal_hillsboro_west: 'relic_crystal_hound',
-    crystal_hillsboro_east: 'relic_golden_thumb',
+    crystal_hillsboro_west: 'relic_golden_thumb',
+    crystal_hillsboro_east: 'relic_crystal_hound',
     crystal_milwaukie: 'relic_amber_stein',
     crystal_walla_walla: 'relic_emerald_leaf',
     crystal_bend: 'relic_marble_mountain',
   };
+  // Earlier builds awarded the Hound at Hillsboro West and the Thumb at East.
+  // Swap them once so a save in progress keeps the same locations completed.
+  const needsRelicSwap = value.flags[RELIC_ORDER_FLAG] !== true;
+  const swappedRelics: Readonly<Record<string, string>> = needsRelicSwap
+    ? {
+        relic_crystal_hound: 'relic_golden_thumb',
+        relic_golden_thumb: 'relic_crystal_hound',
+      }
+    : {};
   const relics = [
-    ...new Set(value.relics.map((id) => crystalToArtifact[id] ?? id)),
+    ...new Set(
+      value.relics.map(
+        (id) => crystalToArtifact[id] ?? swappedRelics[id] ?? id,
+      ),
+    ),
   ];
   const checkpointCrystal = defeatedBossCheckpoints[value.checkpointId];
   const checkpointId =
@@ -93,6 +108,7 @@ export function normalizeSaveData(value: unknown): SaveData | null {
     ...value,
     checkpointId,
     relics,
+    flags: { ...value.flags, [RELIC_ORDER_FLAG]: true },
     stats: {
       ...value.stats,
       score: typeof value.stats.score === 'number' ? value.stats.score : 0,
