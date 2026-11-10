@@ -76,7 +76,6 @@ export class Highway26Scene extends Phaser.Scene {
     this.choiceIndex = 0;
     this.choiceTexts = [];
     this.labels = [];
-    this.marker = undefined;
     this.graphics = undefined;
     this.departButton = undefined;
     this.save = this.repository.load() ?? undefined;
