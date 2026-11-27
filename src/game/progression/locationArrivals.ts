@@ -12,32 +12,37 @@ export const LOCATION_ARRIVALS: Readonly<
 > = {
   hillsboro_west: {
     locationId: 'hillsboro_west',
-    title: 'ENTERING HILLSBORO WEST',
-    subtitle: 'Beyond the fog, something moves between the pines.',
+    title: 'HILLSBORO WEST',
+    subtitle:
+      'Fog pours off the Coast Range and swallows the firs. Something in the Silicon Forest is watching the road.',
     progress: 'DESTINATION 1 OF 5',
   },
   hillsboro_east: {
     locationId: 'hillsboro_east',
-    title: 'ENTERING HILLSBORO EAST',
-    subtitle: 'Power lines hum above the waking city.',
+    title: 'HILLSBORO EAST',
+    subtitle:
+      'Storm clouds stack over the city. Every tower crackles with a charge that is not natural.',
     progress: 'DESTINATION 2 OF 5',
   },
   milwaukie: {
     locationId: 'milwaukie',
-    title: 'ENTERING MILWAUKIE',
-    subtitle: 'Cold river mist curls beneath the old bridge.',
+    title: 'MILWAUKIE',
+    subtitle:
+      'Cold mist rides the Willamette. Beneath the old iron bridge, the river has started to move on its own.',
     progress: 'DESTINATION 3 OF 5',
   },
   walla_walla: {
     locationId: 'walla_walla',
-    title: 'ENTERING WALLA WALLA',
-    subtitle: 'A restless wind races across the golden fields.',
+    title: 'WALLA WALLA',
+    subtitle:
+      'Wind rakes the golden wheat and rattles the vines. On the far hill, the oldest vine has opened its eyes.',
     progress: 'DESTINATION 4 OF 5',
   },
   bend: {
     locationId: 'bend',
-    title: 'ENTERING BEND',
-    subtitle: 'The high desert glows beneath a volcanic sky.',
+    title: 'BEND',
+    subtitle:
+      'Ash drifts over the high desert and the snow is melting from the inside. The mountain is awake.',
     progress: 'FINAL DESTINATION',
   },
 };
