@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { addTrophy } from '../art/trophies';
+import { RELIC_IDS } from '../game/progression/relics';
 import { gameAudio } from '../audio/GameAudio';
 import {
   BUDDA_SPRITE_SCALE,
@@ -206,19 +208,19 @@ export class VictoryCelebrationScene extends Phaser.Scene {
   }
 
   private createArtifactDisplay(): void {
-    FIREWORK_COLORS.forEach((color, index) => {
+    RELIC_IDS.forEach((id, index) => {
       const x = 92 + index * 18;
-      const relic = this.add
-        .rectangle(x, 91, 9, 13, color)
-        .setStrokeStyle(2, 0xffffff, 0.65)
-        .setRotation(Math.PI / 4);
+      const glow = this.add
+        .circle(x, 91, 9, FIREWORK_COLORS[index] ?? 0xffffff, 0.25)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      const relic = addTrophy(this, x, 99, id, 17);
       this.tweens.add({
-        targets: relic,
-        y: 86,
-        scale: 1.15,
+        targets: [relic, glow],
+        y: '-=5',
         duration: 500 + index * 90,
         yoyo: true,
         repeat: -1,
+        ease: 'Sine.easeInOut',
       });
     });
   }

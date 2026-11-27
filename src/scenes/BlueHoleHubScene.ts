@@ -28,14 +28,13 @@ import { TouchControls } from '../ui/TouchControls';
 import { HighScoreRepository } from '../game/saves/highScores';
 import { sharpenSceneText } from '../app/display';
 import { StatusHud } from '../ui/StatusHud';
+import { addTrophy, trophyScale } from '../art/trophies';
 
 const PLAYER_SPEED = 58;
 // Distance from a character sprite's centre down to their feet.
 const FEET_OFFSET = 38;
 const INTERACTION_DISTANCE = 31;
-const RELIC_COLORS = [
-  0xf2c94c, 0x7ed6ef, 0xd68b32, 0x58b87a, 0xd6d1c7,
-] as const;
+const MANTEL_TROPHY_HEIGHT = 13;
 
 interface HubFixture {
   readonly id: 'fridge' | 'mantle' | 'exit' | 'budda';
@@ -60,7 +59,7 @@ export class BlueHoleHubScene extends Phaser.Scene {
   private shadow?: Phaser.GameObjects.Ellipse;
   private chill?: Phaser.GameObjects.Rectangle;
   private flame?: Phaser.GameObjects.Graphics;
-  private mantleSockets: Phaser.GameObjects.Arc[] = [];
+  private mantleSockets: Phaser.GameObjects.Image[] = [];
   private homecomingArtifact?: ReturnType<typeof pendingHomecomingArtifact>;
   private postGameMode = false;
   private postGameIndex = 0;
@@ -204,10 +203,9 @@ export class BlueHoleHubScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.mantleSockets = RELIC_IDS.map((_, index) =>
-      this.add
-        .circle(183 + index * 13, 68, 5, 0x10161c)
-        .setStrokeStyle(1, 0xd9c69a),
+    // Each trophy waits on the mantel as a dark silhouette until it comes home.
+    this.mantleSockets = RELIC_IDS.map((id, index) =>
+      addTrophy(this, 183 + index * 13, 74, id, MANTEL_TROPHY_HEIGHT),
     );
     // A cool wash over the room that lifts as the hearth warms up.
     this.chill = this.add
@@ -377,11 +375,10 @@ export class BlueHoleHubScene extends Phaser.Scene {
   private refreshMantle(): void {
     if (!this.save) return;
     const recovered = new Set(this.save.relics);
-    this.mantleSockets.forEach((socket, index) => {
+    this.mantleSockets.forEach((trophy, index) => {
       const id = RELIC_IDS[index];
-      socket.setFillStyle(
-        id && recovered.has(id) ? (RELIC_COLORS[index] ?? 0x74d7f2) : 0x10161c,
-      );
+      if (id && recovered.has(id)) trophy.clearTint().setAlpha(1);
+      else trophy.setTintFill(0x241812).setAlpha(0.55);
     });
     // Each relic warms the room and feeds the fire.
     const warmth = recoveredRelicCount(this.save.relics) / RELIC_IDS.length;
@@ -406,10 +403,11 @@ export class BlueHoleHubScene extends Phaser.Scene {
     const index = RELIC_IDS.indexOf(this.homecomingArtifact.artifactId);
     const socket = this.mantleSockets[index];
     if (socket) {
-      socket.setScale(0.25);
+      const restingScale = trophyScale(MANTEL_TROPHY_HEIGHT);
+      socket.setScale(restingScale * 0.25);
       this.tweens.add({
         targets: socket,
-        scale: 1.8,
+        scale: restingScale * 1.8,
         duration: 420,
         yoyo: true,
         ease: 'Back.easeOut',

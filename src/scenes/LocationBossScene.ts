@@ -3,6 +3,7 @@ import { gameAudio } from '../audio/GameAudio';
 import { configurePlayerBody, playerVisual } from '../actors/familyAnimations';
 import { BOSS_RIG_SCALE, BossRig } from '../art/bossRigs';
 import { addPainted, addParticles } from '../art/painter';
+import { ensureTrophy, trophyScale } from '../art/trophies';
 import {
   ATTACK_SCALE,
   paintAttackTextures,
@@ -532,7 +533,9 @@ export class LocationBossScene extends Phaser.Scene {
   }
 
   private revealArtifact(x: number, y: number): void {
-    this.artifact = this.physics.add.sprite(x, y, 'location-artifact');
+    this.artifact = this.physics.add
+      .sprite(x, y, ensureTrophy(this, this.location.artifactId))
+      .setScale(trophyScale(28));
     this.artifact.body.setAllowGravity(false);
     this.artifact.setDepth(20);
     this.tweens.add({
@@ -764,7 +767,6 @@ export class LocationBossScene extends Phaser.Scene {
       'boss-projectile',
       'boss-wave',
       'boss-meteor',
-      'location-artifact',
     ].forEach((key) => {
       if (this.textures.exists(key)) this.textures.remove(key);
     });
@@ -776,36 +778,5 @@ export class LocationBossScene extends Phaser.Scene {
         .destroy();
     }
     paintAttackTextures(this, this.location.color);
-    if (!this.textures.exists('location-artifact')) {
-      const artifact = this.add.graphics();
-      if (this.location.id === 'hillsboro_east') {
-        artifact.fillStyle(0x7de4ff).fillTriangle(10, 1, 18, 10, 15, 21);
-        artifact.fillTriangle(10, 1, 2, 10, 5, 21);
-        artifact
-          .fillStyle(0x31536a)
-          .fillRect(5, 15, 4, 7)
-          .fillRect(13, 15, 4, 7);
-        artifact.fillStyle(0xffffff).fillCircle(7, 9, 2).fillCircle(13, 9, 2);
-      } else if (this.location.id === 'hillsboro_west') {
-        artifact.fillStyle(0xf2c84b).fillRoundedRect(7, 2, 7, 21, 3);
-        artifact.fillCircle(5, 8, 4).fillCircle(16, 8, 4);
-        artifact.lineStyle(2, 0xffefaa).strokeRoundedRect(7, 2, 7, 21, 3);
-      } else if (this.location.id === 'milwaukie') {
-        artifact.fillStyle(0xc98232).fillRoundedRect(3, 5, 14, 17, 3);
-        artifact.lineStyle(3, 0xffd58a).strokeRoundedRect(3, 5, 14, 17, 3);
-        artifact.strokeCircle(18, 12, 5);
-        artifact.fillStyle(0xffefc2).fillRect(5, 2, 10, 5);
-      } else if (this.location.id === 'walla_walla') {
-        artifact.fillStyle(0x57c76d).fillEllipse(10, 11, 18, 22);
-        artifact.lineStyle(2, 0xd8ffd8).lineBetween(10, 1, 10, 23);
-        artifact.lineBetween(10, 10, 17, 6).lineBetween(10, 15, 3, 11);
-      } else {
-        artifact.fillStyle(0xe6edf2).fillTriangle(1, 22, 10, 2, 19, 22);
-        artifact.fillStyle(0xb9c8d2).fillTriangle(10, 2, 19, 22, 12, 16);
-        artifact.fillStyle(0xffffff).fillTriangle(6, 11, 10, 2, 14, 11);
-        artifact.lineStyle(2, 0x60717c).lineBetween(1, 22, 19, 22);
-      }
-      artifact.generateTexture('location-artifact', 21, 24).destroy();
-    }
   }
 }
