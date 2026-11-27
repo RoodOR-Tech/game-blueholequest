@@ -4,11 +4,18 @@ import { PhaserInput } from '../game/input/PhaserInput';
 import {
   BOSS_LOCATIONS,
   bossLocationById,
+  type BossLocation,
 } from '../game/progression/bossLocations';
 import {
   LOCATION_ARRIVALS,
   locationArrivalFlag,
+  type LocationArrival,
 } from '../game/progression/locationArrivals';
+import {
+  routeForLocation,
+  type LocationRoute,
+} from '../game/progression/locationRoutes';
+import { addRegionScene, hexColor } from '../art/regionScenes';
 import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { TouchControls } from '../ui/TouchControls';
@@ -45,46 +52,21 @@ export class LocationArrivalScene extends Phaser.Scene {
     const location =
       BOSS_LOCATIONS[this.routeIndex] ?? bossLocationById('hillsboro_west');
     const arrival = LOCATION_ARRIVALS[location.id];
-    this.drawBackdrop(location.id);
-    this.add
-      .rectangle(128, 43, 236, 57, 0x07111c, 0.88)
-      .setStrokeStyle(2, location.color);
-    this.add
-      .text(128, 27, arrival.progress, {
-        color: '#9ec5d8',
-        fontFamily: 'monospace',
-        fontSize: '6px',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-    this.add
-      .text(128, 45, arrival.title, {
-        align: 'center',
-        color: '#f6d77a',
-        fontFamily: 'monospace',
-        fontSize: '11px',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-    this.add
-      .text(128, 64, arrival.subtitle, {
-        align: 'center',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-        fontSize: '6px',
-        wordWrap: { width: 218 },
-      })
-      .setOrigin(0.5);
+    const route = routeForLocation(location.id);
+    addRegionScene(this, location.id);
+    this.drawTitleSequence(location, arrival, route);
     const button = this.add
-      .text(128, 211, 'A / ENTER / TAP • BEGIN THIS ROUTE', {
-        backgroundColor: '#122f43ee',
+      .text(128, 225, 'A / ENTER / TAP • BEGIN THE JOURNEY', {
+        backgroundColor: '#0b1a26ee',
         color: '#f6d77a',
         fontFamily: 'monospace',
         fontSize: '7px',
         fontStyle: 'bold',
-        padding: { x: 9, y: 6 },
+        padding: { x: 9, y: 5 },
       })
       .setOrigin(0.5)
+      .setDepth(30)
+      .setAlpha(0)
       .setInteractive({ useHandCursor: true });
     button.on('pointerdown', () => this.continueJourney());
     this.input.once('pointerdown', () => {
@@ -92,10 +74,17 @@ export class LocationArrivalScene extends Phaser.Scene {
     });
     this.tweens.add({
       targets: button,
-      alpha: 0.65,
-      duration: 700,
-      yoyo: true,
-      repeat: -1,
+      alpha: 1,
+      delay: 2300,
+      duration: 400,
+      onComplete: () =>
+        this.tweens.add({
+          targets: button,
+          alpha: 0.6,
+          duration: 700,
+          yoyo: true,
+          repeat: -1,
+        }),
     });
     this.controls = new PhaserInput(this);
     new TouchControls(this, this.controls);
@@ -135,86 +124,128 @@ export class LocationArrivalScene extends Phaser.Scene {
     );
   }
 
-  private drawBackdrop(locationId: keyof typeof LOCATION_ARRIVALS): void {
-    const g = this.add.graphics();
-    if (locationId === 'hillsboro_west') {
-      g.fillGradientStyle(0x09101d, 0x09101d, 0x263549, 0x263549).fillRect(
+  /** Letterbox, region name, mood line, then the quest briefing. */
+  private drawTitleSequence(
+    location: BossLocation,
+    arrival: LocationArrival,
+    route: LocationRoute,
+  ): void {
+    const accent = hexColor(location.color);
+    const shade = this.add.graphics().setDepth(20);
+    shade
+      .fillGradientStyle(
+        0x03060b,
+        0x03060b,
+        0x03060b,
+        0x03060b,
+        0.92,
+        0.92,
         0,
         0,
-        256,
-        240,
-      );
-      g.fillStyle(0xd8e5cf, 0.75).fillCircle(202, 103, 25);
-      for (let x = -4; x < 270; x += 25)
-        g.fillStyle(x % 50 ? 0x14291f : 0x0c1c18).fillTriangle(
-          x,
-          203,
-          x + 14,
-          91 + (x % 3) * 9,
-          x + 29,
-          203,
-        );
-      g.fillStyle(0xb8cbd0, 0.18)
-        .fillEllipse(128, 177, 290, 42)
-        .fillEllipse(80, 197, 210, 30);
-      g.fillStyle(0x090d10).fillCircle(167, 165, 5).fillRect(164, 169, 6, 20);
-      this.add.text(172, 157, '?', {
-        color: '#ff8c68',
-        fontFamily: 'monospace',
-        fontSize: '8px',
+      )
+      .fillRect(0, 0, 256, 78);
+    shade
+      .fillGradientStyle(
+        0x03060b,
+        0x03060b,
+        0x03060b,
+        0x03060b,
+        0,
+        0,
+        0.95,
+        0.95,
+      )
+      .fillRect(0, 140, 256, 100);
+    const bars = [
+      this.add.rectangle(128, 0, 256, 30, 0x000000).setOrigin(0.5, 0),
+      this.add.rectangle(128, 240, 256, 30, 0x000000).setOrigin(0.5, 1),
+    ].map((bar) => bar.setDepth(40));
+    this.tweens.add({
+      targets: bars,
+      scaleY: 0,
+      duration: 700,
+      delay: 150,
+      ease: 'Cubic.easeInOut',
+      onComplete: () => bars.forEach((bar) => bar.destroy()),
+    });
+    const text = (
+      y: number,
+      value: string,
+      style: Phaser.Types.GameObjects.Text.TextStyle,
+      delay: number,
+    ) => {
+      const item = this.add
+        .text(128, y, value, {
+          align: 'center',
+          fontFamily: 'monospace',
+          stroke: '#03060b',
+          strokeThickness: 2,
+          ...style,
+        })
+        .setOrigin(0.5)
+        .setDepth(30)
+        .setAlpha(0);
+      this.tweens.add({
+        targets: item,
+        alpha: 1,
+        y: { from: y + 4, to: y },
+        delay,
+        duration: 500,
+        ease: 'Cubic.easeOut',
       });
-    } else if (locationId === 'hillsboro_east') {
-      g.fillGradientStyle(0x183252, 0x183252, 0xe18b5b, 0xe18b5b).fillRect(
-        0,
-        0,
-        256,
-        240,
-      );
-      for (let x = 0; x < 256; x += 34)
-        g.fillStyle(0x172331).fillRect(x, 132 - (x % 4) * 8, 28, 75);
-      g.lineStyle(3, 0x171b24)
-        .lineBetween(26, 103, 26, 210)
-        .lineBetween(224, 91, 224, 210)
-        .lineBetween(26, 111, 224, 99);
-      g.lineStyle(1, 0x6ee6ff).lineBetween(27, 115, 223, 103);
-    } else if (locationId === 'milwaukie') {
-      g.fillGradientStyle(0x274358, 0x274358, 0x95b7b0, 0x95b7b0).fillRect(
-        0,
-        0,
-        256,
-        240,
-      );
-      g.fillStyle(0x296d86).fillRect(0, 150, 256, 90);
-      g.fillStyle(0x253943).fillRect(0, 121, 256, 12);
-      for (let x = 10; x < 256; x += 35) g.fillRect(x, 125, 7, 48);
-      g.lineStyle(2, 0xb9efff, 0.35)
-        .lineBetween(0, 178, 256, 170)
-        .lineBetween(0, 201, 256, 190);
-    } else if (locationId === 'walla_walla') {
-      g.fillGradientStyle(0x5e8ac2, 0x5e8ac2, 0xf0ba6d, 0xf0ba6d).fillRect(
-        0,
-        0,
-        256,
-        240,
-      );
-      g.fillStyle(0xc89c43).fillRect(0, 134, 256, 106);
-      g.lineStyle(2, 0x7d632f);
-      for (let x = -20; x < 280; x += 18) g.lineBetween(128, 137, x, 240);
-      g.lineStyle(2, 0xf2d477);
-      for (let x = 5; x < 256; x += 12) g.lineBetween(x, 151, x + 5, 132);
-    } else {
-      g.fillGradientStyle(0x321e35, 0x321e35, 0xf0784c, 0xf0784c).fillRect(
-        0,
-        0,
-        256,
-        240,
-      );
-      g.fillStyle(0x343840)
-        .fillTriangle(42, 194, 111, 79, 174, 194)
-        .fillTriangle(111, 194, 181, 101, 237, 194);
-      g.fillStyle(0xe9eff2).fillTriangle(83, 126, 111, 79, 137, 128);
-      g.fillStyle(0xff6838, 0.8).fillTriangle(105, 194, 119, 115, 127, 194);
-      g.fillStyle(0x18251f).fillRect(0, 194, 256, 46);
-    }
+      return item;
+    };
+    text(
+      16,
+      `ENTERING  •  ${arrival.progress}`,
+      { color: accent, fontSize: '6px', fontStyle: 'bold' },
+      350,
+    );
+    const title = text(
+      33,
+      arrival.title,
+      {
+        color: '#f6d77a',
+        fontSize: '17px',
+        fontStyle: 'bold',
+        strokeThickness: 4,
+      },
+      550,
+    );
+    title.setLetterSpacing(1);
+    text(
+      56,
+      arrival.subtitle,
+      { color: '#e4ecef', fontSize: '6px', wordWrap: { width: 224 } },
+      1000,
+    );
+    const rule = this.add
+      .rectangle(128, 160, 180, 1, location.color, 0.85)
+      .setDepth(30)
+      .setScale(0, 1);
+    this.tweens.add({ targets: rule, scaleX: 1, delay: 1400, duration: 500 });
+    text(
+      172,
+      `RECOVER THE ${location.artifactName}`,
+      {
+        color: '#f6d77a',
+        fontSize: '9px',
+        fontStyle: 'bold',
+        strokeThickness: 3,
+      },
+      1500,
+    );
+    text(
+      186,
+      `GUARDED BY THE ${location.bossName}`,
+      { color: accent, fontSize: '6px', fontStyle: 'bold' },
+      1750,
+    );
+    text(
+      203,
+      `THE ROAD: ${route.events.map((event) => event.title).join('  ›  ')}`,
+      { color: '#b8ccd6', fontSize: '6px', wordWrap: { width: 236 } },
+      2000,
+    );
   }
 }

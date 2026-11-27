@@ -3,6 +3,7 @@ import { gameAudio } from '../audio/GameAudio';
 import { PhaserInput } from '../game/input/PhaserInput';
 import {
   BOSS_LOCATIONS,
+  bossLocationById,
   isLocationUnlocked,
 } from '../game/progression/bossLocations';
 import {
@@ -17,8 +18,16 @@ import { SaveRepository } from '../game/saves/repository';
 import type { SaveData } from '../game/saves/schema';
 import { addScore, SCORE_VALUES } from '../game/progression/scoring';
 import { TouchControls } from '../ui/TouchControls';
+import { playerVisual } from '../actors/familyAnimations';
+import {
+  journeyTrail,
+  paintJourneyMap,
+  type JourneyTrail,
+} from '../art/journeyMaps';
+import { addPainted } from '../art/painter';
+import { hexColor, lurkingEyes } from '../art/regionScenes';
+import { JOURNEY_FRAME, stopProgress } from '../game/progression/journeyPaths';
 
-const NODE_X = [28, 78, 128, 178, 228] as const;
 const WORLD_POINTS = [
   { x: 42, y: 105, label: 'ROCKAWAY', labelX: 42, labelY: 119 },
   { x: 78, y: 91, label: 'HILLSBORO W', labelX: 75, labelY: 77 },
@@ -37,6 +46,13 @@ export class Highway26Scene extends Phaser.Scene {
   private marker?: Phaser.GameObjects.Arc;
   private graphics?: Phaser.GameObjects.Graphics;
   private labels: Phaser.GameObjects.Text[] = [];
+  private trail?: JourneyTrail;
+  private traveler?: Phaser.GameObjects.Sprite;
+  private travelerShadow?: Phaser.GameObjects.Ellipse;
+  private progressDots?: Phaser.GameObjects.Graphics;
+  private journeyObjects: Phaser.GameObjects.GameObject[] = [];
+  private readonly trailProgress = { t: 0 };
+  private moving = false;
   private heading?: Phaser.GameObjects.Text;
   private message?: Phaser.GameObjects.Text;
   private departButton?: Phaser.GameObjects.Text;
@@ -76,6 +92,11 @@ export class Highway26Scene extends Phaser.Scene {
     this.choiceIndex = 0;
     this.choiceTexts = [];
     this.labels = [];
+    this.journeyObjects = [];
+    this.traveler = undefined;
+    this.travelerShadow = undefined;
+    this.progressDots = undefined;
+    this.moving = false;
     this.graphics = undefined;
     this.departButton = undefined;
     this.save = this.repository.load() ?? undefined;
@@ -119,13 +140,8 @@ export class Highway26Scene extends Phaser.Scene {
       this.scene.start('location-arrival', { routeIndex: this.routeIndex });
       return;
     }
-    if (this.traveling) {
-      this.drawJourney();
-      this.marker?.setPosition(
-        NODE_X[this.nodeIndex] ?? NODE_X[0],
-        this.nodeY(this.nodeIndex),
-      );
-    } else this.drawRouteMenu();
+    if (this.traveling) this.drawJourney();
+    else this.drawRouteMenu();
   }
 
   update(): void {
@@ -184,7 +200,7 @@ export class Highway26Scene extends Phaser.Scene {
   }
 
   private updateRoute(): void {
-    if (!this.controls) return;
+    if (!this.controls || this.moving) return;
     const advance =
       this.controls.actions.get('right').pressed ||
       this.controls.actions.get('confirm').pressed;
@@ -489,6 +505,14 @@ export class Highway26Scene extends Phaser.Scene {
   private clearMap(): void {
     this.graphics?.destroy();
     this.marker?.destroy();
+    this.marker = undefined;
+    this.tweens.killTweensOf(this.trailProgress);
+    this.moving = false;
+    this.journeyObjects.forEach((item) => item.destroy());
+    this.journeyObjects = [];
+    this.traveler = undefined;
+    this.travelerShadow = undefined;
+    this.progressDots = undefined;
     this.labels.forEach((label) => label.destroy());
     this.labels = [];
     this.departButton?.destroy();
@@ -627,6 +651,7 @@ export class Highway26Scene extends Phaser.Scene {
       }),
     );
     const route = LOCATION_ROUTES[this.routeIndex];
+    this.message?.setY(220);
     this.heading?.setText('THE CONNECTED QUEST MAP');
     this.message?.setText(
       route
@@ -678,10 +703,13 @@ export class Highway26Scene extends Phaser.Scene {
   }
 
   private advanceRouteNode(): void {
+    if (this.moving) return;
     if (this.nodeIndex < 4) {
       this.nodeIndex += 1;
-      this.moveMarker();
-      if (this.nodeIndex <= 3) this.openEvent();
+      // Events open once the traveler has walked to the stop.
+      this.moveMarker(() => {
+        if (this.nodeIndex <= 3) this.openEvent();
+      });
       return;
     }
     const route = LOCATION_ROUTES[this.routeIndex];
@@ -691,37 +719,43 @@ export class Highway26Scene extends Phaser.Scene {
 
   private drawJourney(): void {
     const route = LOCATION_ROUTES[this.routeIndex];
-    if (!route) return;
+    if (!route || !this.save) return;
     this.clearMap();
-    const g = this.graphics!;
-    g.fillStyle(0x285c3e);
-    for (let x = 9; x < 250; x += 22)
-      g.fillTriangle(x, 201, x + 10, 169, x + 20, 201);
-    g.lineStyle(5, 0x785738).lineBetween(NODE_X[0], 148, NODE_X[4], 84);
-    g.lineStyle(2, 0xf0d492).lineBetween(NODE_X[0], 148, NODE_X[4], 84);
-    NODE_X.forEach((x, index) => {
-      const event = route.events[index - 1];
-      const resolved =
-        event !== undefined &&
-        Boolean(this.save?.flags[routeEventFlag(route.locationId, event.id)]);
-      g.fillStyle(
-        index === 4 ? 0x8f3e38 : resolved ? 0xf6d77a : 0x17374c,
-      ).fillCircle(x, this.nodeY(index), index === 4 ? 7 : 5);
-    });
-    this.marker = this.add
-      .circle(NODE_X[0], this.nodeY(0), 4, 0xffffff)
-      .setStrokeStyle(2, 0x08111d);
-    this.labels.push(
-      this.add
-        .text(240, 60, 'BOSS + ARTIFACT', {
-          color: '#7b2929',
-          fontFamily: 'monospace',
-          fontSize: '5px',
-        })
-        .setOrigin(1, 0),
+    this.graphics?.clear();
+    const location = bossLocationById(route.locationId);
+    const trail = journeyTrail(route.locationId);
+    this.trail = trail;
+    this.journeyObjects.push(
+      addPainted(
+        this,
+        0,
+        0,
+        paintJourneyMap(this, route.locationId, trail),
+        0,
+        0,
+      ),
     );
+    this.progressDots = this.add.graphics();
+    this.journeyObjects.push(this.progressDots);
+    trail.layout.stops.forEach((_, index) =>
+      this.drawStop(route, location, index),
+    );
+    const visual = playerVisual(this.save.activeTeamId);
+    this.travelerShadow = this.add
+      .ellipse(0, 0, 9, 3, 0x000000, 0.4)
+      .setDepth(49);
+    this.traveler = this.add
+      .sprite(0, 0, visual.texture, visual.frame)
+      .setScale(visual.scale * 0.34)
+      .setOrigin(0.5, 0.92)
+      .setDepth(50)
+      .play(visual.idle);
+    this.journeyObjects.push(this.travelerShadow, this.traveler);
+    this.trailProgress.t = stopProgress(trail.layout, this.nodeIndex);
+    this.placeTraveler();
+    this.drawProgress();
     this.departButton = this.add
-      .text(128, 198, 'ADVANCE TO NEXT STOP', {
+      .text(128, 206, 'ADVANCE TO NEXT STOP', {
         align: 'center',
         backgroundColor: '#173f57ee',
         color: '#f6d77a',
@@ -734,23 +768,203 @@ export class Highway26Scene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.advanceRouteNode());
     this.heading?.setText(route.label);
-    this.message?.setText('RIGHT / A: ADVANCE • LEFT: BACK • B / ESC: ROUTES');
+    this.message
+      ?.setY(226)
+      .setText(
+        this.nodeIndex === 4
+          ? 'LAIR REACHED • A / ENTER: BOSS BATTLE'
+          : 'RIGHT / A: ADVANCE • LEFT: BACK • B / ESC: ROUTES',
+      );
   }
 
-  private moveMarker(): void {
-    const x = NODE_X[this.nodeIndex];
-    if (x === undefined || !this.marker) return;
+  /** Start flag, event badges and the boss lair, each with a name plate. */
+  private drawStop(
+    route: (typeof LOCATION_ROUTES)[number],
+    location: ReturnType<typeof bossLocationById>,
+    index: number,
+  ): void {
+    const stops = this.trail?.layout.stops;
+    const stop = stops?.[index];
+    if (!stops || !stop) return;
+    const g = this.add.graphics().setDepth(20);
+    this.journeyObjects.push(g);
+    let label: string;
+    let labelColor = '#ffffff';
+    if (index === 0) {
+      g.lineStyle(1.2, 0x2a1c10).lineBetween(
+        stop.x,
+        stop.y + 2,
+        stop.x,
+        stop.y - 11,
+      );
+      g.fillStyle(location.color).fillTriangle(
+        stop.x,
+        stop.y - 11,
+        stop.x + 8,
+        stop.y - 8.5,
+        stop.x,
+        stop.y - 6,
+      );
+      g.fillStyle(0xf6d77a).fillCircle(stop.x, stop.y, 3);
+      label = `FROM\n${route.origin}`;
+      labelColor = '#d8e6ee';
+    } else if (index === 4) {
+      g.fillStyle(0x05080e, 0.85).fillCircle(stop.x, stop.y, 9);
+      g.lineStyle(1.5, location.color, 0.95).strokeCircle(stop.x, stop.y, 9);
+      const ring = this.add
+        .circle(stop.x, stop.y, 9)
+        .setStrokeStyle(1, location.color, 0.9)
+        .setDepth(20);
+      this.tweens.add({
+        targets: ring,
+        scale: 2,
+        alpha: 0,
+        duration: 1400,
+        repeat: -1,
+      });
+      const eyes = lurkingEyes(
+        this,
+        stop.x,
+        stop.y - 1,
+        5.5,
+        location.color,
+        0.45,
+        21,
+      );
+      this.journeyObjects.push(ring, eyes);
+      label = location.bossName;
+      labelColor = hexColor(location.color);
+    } else {
+      const event = route.events[index - 1];
+      if (!event) return;
+      const resolved = Boolean(
+        this.save?.flags[routeEventFlag(route.locationId, event.id)],
+      );
+      const fill = resolved
+        ? 0xf6d77a
+        : event.kind === 'calamity'
+          ? 0xd8553a
+          : 0x3f9c5c;
+      g.fillStyle(0x05080e, 0.6).fillCircle(stop.x + 0.8, stop.y + 1.2, 6.5);
+      g.fillStyle(fill).fillCircle(stop.x, stop.y, 6);
+      g.lineStyle(1.2, 0x05080e).strokeCircle(stop.x, stop.y, 6);
+      g.lineStyle(0.6, 0xffffff, 0.5).strokeCircle(stop.x, stop.y, 4.6);
+      const glyph = this.add
+        .text(
+          stop.x,
+          stop.y,
+          resolved ? '✓' : event.kind === 'calamity' ? '!' : '▲',
+          {
+            color: resolved ? '#3a2a08' : '#ffffff',
+            fontFamily: 'monospace',
+            fontSize: '6px',
+            fontStyle: 'bold',
+          },
+        )
+        .setOrigin(0.5)
+        .setDepth(21);
+      this.journeyObjects.push(glyph);
+      if (!resolved && index === this.nodeIndex + 1) {
+        const pulse = this.add
+          .circle(stop.x, stop.y, 6)
+          .setStrokeStyle(1, 0xffffff, 0.9)
+          .setDepth(20);
+        this.tweens.add({
+          targets: pulse,
+          scale: 1.9,
+          alpha: 0,
+          duration: 1000,
+          repeat: -1,
+        });
+        this.journeyObjects.push(pulse);
+      }
+      const words = event.title.split(' ');
+      const half = Math.ceil(words.length / 2);
+      label =
+        `${words.slice(0, half).join(' ')}\n${words.slice(half).join(' ')}`.trim();
+      labelColor = resolved
+        ? '#f6d77a'
+        : event.kind === 'calamity'
+          ? '#ffb09a'
+          : '#b8f0c4';
+    }
+    // Put the plate on the side of the stop the trail does not use.
+    const neighbours = [stops[index - 1], stops[index + 1]].filter(
+      (point): point is (typeof stops)[number] => point !== undefined,
+    );
+    const isPeak = neighbours.every((point) => point.y > stop.y);
+    const above = isPeak ? stop.y > 60 : stop.y >= 165;
+    const plate = this.add
+      // Plates above a stop clear the traveler standing on it.
+      .text(stop.x, above ? stop.y - 24 : stop.y + 9, label, {
+        align: 'center',
+        backgroundColor: '#05080ecc',
+        color: labelColor,
+        fontFamily: 'monospace',
+        fontSize: '5px',
+        fontStyle: 'bold',
+        lineSpacing: -1,
+        padding: { x: 3, y: 1 },
+      })
+      .setOrigin(0.5, above ? 1 : 0)
+      .setDepth(22);
+    const halfWidth = plate.displayWidth / 2;
+    plate.setX(
+      Phaser.Math.Clamp(
+        stop.x,
+        JOURNEY_FRAME.x + 3 + halfWidth,
+        JOURNEY_FRAME.x + JOURNEY_FRAME.width - 3 - halfWidth,
+      ),
+    );
+    this.journeyObjects.push(plate);
+  }
+
+  private placeTraveler(): void {
+    if (!this.trail || !this.traveler) return;
+    const point = this.trail.curve.getPoint(this.trailProgress.t);
+    if (Math.abs(point.x - this.traveler.x) > 0.05)
+      this.traveler.setFlipX(point.x < this.traveler.x);
+    this.traveler.setPosition(point.x, point.y);
+    this.travelerShadow?.setPosition(point.x, point.y);
+  }
+
+  /** Gold footprints along the stretch of trail already walked. */
+  private drawProgress(): void {
+    if (!this.trail || !this.progressDots) return;
+    const dots = this.progressDots.clear();
+    for (let t = 0; t <= this.trailProgress.t; t += 0.011) {
+      const point = this.trail.curve.getPoint(t);
+      dots
+        .fillStyle(0x05080e, 0.5)
+        .fillCircle(point.x + 0.4, point.y + 0.5, 1.3);
+      dots.fillStyle(0xf6d77a, 1).fillCircle(point.x, point.y, 1.1);
+    }
+  }
+
+  private moveMarker(onArrive?: () => void): void {
+    if (!this.trail || !this.traveler || !this.save) return;
+    const target = stopProgress(this.trail.layout, this.nodeIndex);
+    const distance = Math.abs(target - this.trailProgress.t);
+    const visual = playerVisual(this.save.activeTeamId);
+    this.moving = true;
+    this.traveler.play(visual.walk, true);
+    this.tweens.killTweensOf(this.trailProgress);
     this.tweens.add({
-      targets: this.marker,
-      x,
-      y: this.nodeY(this.nodeIndex),
-      duration: 150,
+      targets: this.trailProgress,
+      t: target,
+      duration: Math.max(300, distance * 3800),
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        this.placeTraveler();
+        this.drawProgress();
+      },
+      onComplete: () => {
+        this.moving = false;
+        this.traveler?.play(visual.idle, true);
+        if (this.nodeIndex === 4)
+          this.message?.setText('LAIR REACHED • A / ENTER: BOSS BATTLE');
+        onArrive?.();
+      },
     });
-    if (this.nodeIndex === 4)
-      this.message?.setText('DESTINATION REACHED • A / ENTER: BOSS BATTLE');
-  }
-
-  private nodeY(index: number): number {
-    return 148 - index * 16;
   }
 }
