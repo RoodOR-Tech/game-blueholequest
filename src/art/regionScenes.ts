@@ -855,17 +855,29 @@ export function lurkingEyes(
       .setBlendMode(Phaser.BlendModes.ADD),
   ]);
   const eyes = scene.add.container(x, y, parts).setDepth(depth);
+  let nextBlink: Phaser.Time.TimerEvent | undefined;
   const blink = () => {
+    if (!eyes.active) return;
     scene.tweens.add({
       targets: eyes,
       scaleY: 0.08,
       duration: 70,
       yoyo: true,
-      onComplete: () =>
-        scene.time.delayedCall(Phaser.Math.Between(1800, 4200), blink),
+      onComplete: () => {
+        nextBlink = scene.time.delayedCall(
+          Phaser.Math.Between(1800, 4200),
+          blink,
+        );
+      },
     });
   };
-  scene.time.delayedCall(1400, blink);
+  nextBlink = scene.time.delayedCall(1400, blink);
+  // The eyes can be removed while the scene keeps running (the journey map
+  // is redrawn in place), so their timer and tweens must go with them.
+  eyes.once(Phaser.GameObjects.Events.DESTROY, () => {
+    nextBlink?.remove(false);
+    scene.tweens.killTweensOf(eyes);
+  });
   scene.tweens.add({
     targets: eyes,
     alpha: { from: 0.75, to: 1 },

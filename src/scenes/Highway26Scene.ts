@@ -508,7 +508,11 @@ export class Highway26Scene extends Phaser.Scene {
     this.marker = undefined;
     this.tweens.killTweensOf(this.trailProgress);
     this.moving = false;
-    this.journeyObjects.forEach((item) => item.destroy());
+    // Pulsing rings loop forever, so stop their tweens before removing them.
+    this.journeyObjects.forEach((item) => {
+      this.tweens.killTweensOf(item);
+      item.destroy();
+    });
     this.journeyObjects = [];
     this.traveler = undefined;
     this.travelerShadow = undefined;
