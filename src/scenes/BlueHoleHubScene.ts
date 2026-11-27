@@ -404,13 +404,15 @@ export class BlueHoleHubScene extends Phaser.Scene {
     const socket = this.mantleSockets[index];
     if (socket) {
       const restingScale = trophyScale(MANTEL_TROPHY_HEIGHT);
+      // Pop in large, then settle at its resting size. (A yoyo would return
+      // to the small starting size and leave the trophy shrunken.)
       socket.setScale(restingScale * 0.25);
-      this.tweens.add({
+      this.tweens.chain({
         targets: socket,
-        scale: restingScale * 1.8,
-        duration: 420,
-        yoyo: true,
-        ease: 'Back.easeOut',
+        tweens: [
+          { scale: restingScale * 1.8, duration: 420, ease: 'Back.easeOut' },
+          { scale: restingScale, duration: 320, ease: 'Sine.easeInOut' },
+        ],
       });
     }
     gameAudio.play('artifact');

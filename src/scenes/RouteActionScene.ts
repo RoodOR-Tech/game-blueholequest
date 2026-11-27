@@ -897,42 +897,100 @@ export class RouteActionScene extends Phaser.Scene {
     });
   }
 
-  /** A crescent sweeping from overhead down to the feet, in front of the player. */
+  /**
+   * A crescent slash sweeping from overhead down to the feet: thick in the
+   * middle, sharp at both tips, with a white-hot leading edge, a gold body and
+   * an amber glow. The tail chases the head so the slash shrinks away.
+   */
   private drawSwing(top: number, bottom: number): void {
     if (!this.player) return;
-    const centreX = this.player.x + this.facing * 6;
+    const centreX = this.player.x + this.facing * 4;
     const centreY = (top + bottom) / 2;
-    const radius = (bottom - top) / 2;
-    const start = this.facing > 0 ? -Math.PI * 0.42 : Math.PI * 1.42;
-    const end = this.facing > 0 ? Math.PI * 0.42 : Math.PI * 0.58;
+    const outer = (bottom - top) / 2 + 8;
+    const start = this.facing > 0 ? -Math.PI * 0.45 : Math.PI * 1.45;
+    const end = this.facing > 0 ? Math.PI * 0.45 : Math.PI * 0.55;
     const swing = this.add.graphics().setDepth(15);
     const sweep = { t: 0 };
+    // Points along one crescent band between the tail and head angles.
+    const band = (
+      tail: number,
+      head: number,
+      inset: number,
+      thickness: number,
+    ): Phaser.Math.Vector2[] => {
+      const steps = 18;
+      const outerEdge: Phaser.Math.Vector2[] = [];
+      const innerEdge: Phaser.Math.Vector2[] = [];
+      for (let i = 0; i <= steps; i += 1) {
+        const u = i / steps;
+        const angle = tail + (head - tail) * u;
+        // Fullest just behind the head, tapering to a point at each end.
+        const swell = Math.pow(Math.sin(Math.PI * u), 0.8) * (0.55 + 0.45 * u);
+        const r1 = outer - inset;
+        const r2 = r1 - thickness * swell;
+        outerEdge.push(
+          new Phaser.Math.Vector2(
+            centreX + Math.cos(angle) * r1,
+            centreY + Math.sin(angle) * r1,
+          ),
+        );
+        innerEdge.push(
+          new Phaser.Math.Vector2(
+            centreX + Math.cos(angle) * r2,
+            centreY + Math.sin(angle) * r2,
+          ),
+        );
+      }
+      return [...outerEdge, ...innerEdge.reverse()];
+    };
+    const sparks = () => {
+      for (let i = 0; i < 4; i += 1) {
+        const angle = end + Phaser.Math.FloatBetween(-0.5, 0.3) * this.facing;
+        const x = centreX + Math.cos(angle) * outer;
+        const y = centreY + Math.sin(angle) * outer;
+        const spark = this.add
+          .rectangle(x, y, 3, 1, i % 2 ? 0xffffff : 0xffd24a)
+          .setDepth(16)
+          .setRotation(angle);
+        this.tweens.add({
+          targets: spark,
+          x: x + Math.cos(angle) * Phaser.Math.Between(6, 12),
+          y: y + Math.sin(angle) * Phaser.Math.Between(6, 12),
+          alpha: 0,
+          scaleX: 0.3,
+          duration: 180,
+          ease: 'Quad.easeOut',
+          onComplete: () => spark.destroy(),
+        });
+      }
+    };
     this.tweens.add({
       targets: sweep,
       t: 1,
-      duration: 150,
-      ease: 'Quad.easeOut',
+      duration: 210,
+      ease: 'Linear',
       onUpdate: () => {
-        const head = start + (end - start) * sweep.t;
+        const t = sweep.t;
+        const headT = 1 - Math.pow(1 - Math.min(1, t / 0.7), 3);
+        const tailT = Math.max(0, (t - 0.35) / 0.65);
+        const head = start + (end - start) * headT;
+        const tail = start + (end - start) * tailT * tailT;
+        const fade = t < 0.75 ? 1 : 1 - (t - 0.75) / 0.25;
         swing
           .clear()
-          .lineStyle(7, 0xffd24a, 0.6 * (1 - sweep.t * 0.5))
-          .beginPath()
-          .arc(centreX, centreY, radius + 6, start, head, this.facing < 0)
-          .strokePath()
-          .lineStyle(2, 0xffffff, 0.9 * (1 - sweep.t * 0.5))
-          .beginPath()
-          .arc(centreX, centreY, radius + 6, start, head, this.facing < 0)
-          .strokePath();
+          // A faint smear inside the curve sells the motion.
+          .fillStyle(0xfff4c8, 0.16 * fade)
+          .fillPoints(band(tail, head, 8, outer * 0.5), true)
+          .fillStyle(0xff9a2a, 0.32 * fade)
+          .fillPoints(band(tail, head, -2, 13), true)
+          .fillStyle(0xffd24a, 0.85 * fade)
+          .fillPoints(band(tail, head, 0, 9), true)
+          .fillStyle(0xffffff, fade)
+          .fillPoints(band(tail, head, 0, 3.2), true);
       },
-      onComplete: () =>
-        this.tweens.add({
-          targets: swing,
-          alpha: 0,
-          duration: 90,
-          onComplete: () => swing.destroy(),
-        }),
+      onComplete: () => swing.destroy(),
     });
+    this.time.delayedCall(130, sparks);
   }
 
   private damagePlayer(time: number, direction: number): void {
