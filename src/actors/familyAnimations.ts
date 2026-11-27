@@ -256,6 +256,9 @@ interface PoseMeasure {
   readonly bottom: number;
   /** Mean x of the head and chest, relative to the cell. */
   readonly torsoX: number;
+  /** Horizontal extent of the artwork, relative to the cell. */
+  readonly left: number;
+  readonly right: number;
 }
 
 function measurePose(
@@ -282,6 +285,14 @@ function measurePose(
         break;
       }
   if (top < 0 || bottom <= top) return null;
+  let left = cellWidth;
+  let right = -1;
+  for (let y = top; y <= bottom; y += 1)
+    for (let x = 0; x < cellWidth; x += 1)
+      if (opaque(x, y)) {
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+      }
   const span = bottom - top;
   let sum = 0;
   let count = 0;
@@ -291,7 +302,7 @@ function measurePose(
         sum += x;
         count += 1;
       }
-  return count ? { top, bottom, torsoX: sum / count } : null;
+  return count ? { top, bottom, torsoX: sum / count, left, right } : null;
 }
 
 /**
@@ -340,10 +351,19 @@ export function alignWalkPoses(
   };
   // Idle and walk poses share the idle baseline; jump and attack poses keep
   // their own height and are only lined up sideways.
+  // A pose that reaches far forward (an attack) can only move as far as its
+  // cell allows, so no artwork is pushed off the edge.
   const offset = (index: number) => {
     const pose = measures[index]!;
+    const cellWidth = cells[index]!.width;
     return {
-      dx: Math.round(reference.torsoX - pose.torsoX),
+      dx: Math.max(
+        -pose.left,
+        Math.min(
+          cellWidth - 1 - pose.right,
+          Math.round(reference.torsoX - pose.torsoX),
+        ),
+      ),
       dy: index <= 4 ? reference.bottom - pose.bottom : 0,
     };
   };

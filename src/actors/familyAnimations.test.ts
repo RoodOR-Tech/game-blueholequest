@@ -107,4 +107,38 @@ describe('illustrated sprite cleanup', () => {
     expect(redAt(frames, 8)).toBe(13);
     expect(redAt(frames, 34)).toBe(10);
   });
+
+  it('never pushes a far-reaching pose out of its cell', () => {
+    const cell = 20;
+    const frames = 8;
+    const width = cell * frames;
+    const height = 30;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    const paint = (x: number, y: number) => {
+      pixels[(y * width + x) * 4 + 3] = 255;
+    };
+    for (let frame = 0; frame < frames; frame += 1) {
+      const left = frame * cell;
+      // Torsos sit at x 14 in the idle cell but x 2 in the last cell, whose
+      // pose also reaches to the cell's right edge.
+      const torso = frame === 7 ? 2 : 14;
+      for (let y = 4; y < 26; y += 1) paint(left + torso, y);
+      if (frame === 7) for (let x = 2; x < cell; x += 1) paint(left + x, 20);
+    }
+    const before = Array.from(pixels).filter(
+      (value, index) => index % 4 === 3 && value > 0,
+    ).length;
+
+    const aligned = alignWalkPoses(pixels, width, height, frames);
+    const lastCell = Array.from(aligned.pixels).filter(
+      (value, index) =>
+        index % 4 === 3 &&
+        value > 0 &&
+        Math.floor(index / 4) % aligned.width >= 7 * cell &&
+        Math.floor(index / 4) % aligned.width < 8 * cell,
+    ).length;
+
+    expect(lastCell).toBe(22 + 18 - 1);
+    expect(before).toBeGreaterThan(0);
+  });
 });
