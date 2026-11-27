@@ -37,6 +37,9 @@ const SHEETS: Readonly<
   },
 };
 
+/** Width of the original pose cells on each cleaned sheet, by texture key. */
+const poseSheetWidths = new Map<string, number>();
+
 export function preloadFamilySprites(scene: Phaser.Scene): void {
   Object.values(SHEETS).forEach((sheet) =>
     scene.load.image(sheet.key, sheet.path),
@@ -46,17 +49,29 @@ export function preloadFamilySprites(scene: Phaser.Scene): void {
 export function registerFamilyAnimations(scene: Phaser.Scene): void {
   (Object.keys(SHEETS) as TeamId[]).forEach((teamId) => {
     const sheet = SHEETS[teamId];
-    const texture = cleanConnectedBackground(scene, sheet.key);
+    const texture = cleanConnectedBackground(scene, sheet.key, 8, true);
     const image = texture.getSourceImage() as HTMLCanvasElement;
+    const poseWidth = poseSheetWidths.get(texture.key) ?? image.width;
     const frames = Array.from(
       { length: 8 },
       (_, index) => `${teamId}-frame-${index}`,
     );
     frames.forEach((frame, index) => {
-      const bounds = proportionalFrameBounds(image.width, 8, index);
+      const bounds = proportionalFrameBounds(poseWidth, 8, index);
       if (!texture.has(frame))
         texture.add(frame, 0, bounds.x, 0, bounds.width, image.height);
     });
+    const passing = `${teamId}-frame-passing`;
+    const hasPassing = image.width > poseWidth;
+    if (hasPassing && !texture.has(passing))
+      texture.add(
+        passing,
+        0,
+        poseWidth,
+        0,
+        image.width - poseWidth,
+        image.height,
+      );
     createAnimation(
       scene,
       `${teamId}-idle`,
@@ -65,12 +80,16 @@ export function registerFamilyAnimations(scene: Phaser.Scene): void {
       2,
       -1,
     );
+    // The sheets only hold mid-stride poses, so the walk steps through a
+    // built passing pose between strides; otherwise the legs never close.
     createAnimation(
       scene,
       `${teamId}-walk`,
       sheet.key,
-      frames.slice(2, 5),
-      7,
+      hasPassing
+        ? [frames[2]!, passing, frames[4]!, passing]
+        : frames.slice(2, 5),
+      9,
       -1,
     );
     createAnimation(
@@ -88,6 +107,7 @@ export function cleanConnectedBackground(
   scene: Phaser.Scene,
   sourceKey: string,
   frameCount = 8,
+  buildWalkCycle = false,
 ): Phaser.Textures.Texture {
   const source = scene.textures
     .get(sourceKey)
@@ -142,17 +162,23 @@ export function cleanConnectedBackground(
     source.height,
     frameCount,
   );
+  const sheet = buildWalkCycle
+    ? alignWalkPoses(packed.pixels, packed.width, source.height, frameCount)
+    : { pixels: packed.pixels, width: packed.width };
   const canvasTexture = scene.textures.createCanvas(
     cleanKey,
-    packed.width,
+    sheet.width,
     source.height,
   );
   if (!canvasTexture) return scene.textures.get(sourceKey);
+  // The pose cells keep their original layout; a passing pose, if built,
+  // sits in one extra cell past them.
+  poseSheetWidths.set(cleanKey, packed.width);
   const packedImage = canvasTexture.context.createImageData(
-    packed.width,
+    sheet.width,
     source.height,
   );
-  packedImage.data.set(packed.pixels);
+  packedImage.data.set(sheet.pixels);
   canvasTexture.context.putImageData(packedImage, 0, 0);
   canvasTexture.refresh();
   // The sheets are detailed illustrations drawn well below full size.
@@ -223,6 +249,119 @@ export function packOpaquePoses(
     });
   });
   return { pixels: packed, width: packedWidth };
+}
+
+interface PoseMeasure {
+  readonly top: number;
+  readonly bottom: number;
+  /** Mean x of the head and chest, relative to the cell. */
+  readonly torsoX: number;
+}
+
+function measurePose(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+  cellX: number,
+  cellWidth: number,
+): PoseMeasure | null {
+  const opaque = (x: number, y: number) =>
+    (pixels[(y * width + cellX + x) * 4 + 3] ?? 0) > 10;
+  let top = -1;
+  let bottom = -1;
+  for (let y = 0; y < height && top < 0; y += 1)
+    for (let x = 0; x < cellWidth; x += 1)
+      if (opaque(x, y)) {
+        top = y;
+        break;
+      }
+  for (let y = height - 1; y >= 0 && bottom < 0; y -= 1)
+    for (let x = 0; x < cellWidth; x += 1)
+      if (opaque(x, y)) {
+        bottom = y;
+        break;
+      }
+  if (top < 0 || bottom <= top) return null;
+  const span = bottom - top;
+  let sum = 0;
+  let count = 0;
+  for (let y = top + Math.floor(span * 0.08); y < top + span * 0.4; y += 1)
+    for (let x = 0; x < cellWidth; x += 1)
+      if (opaque(x, y)) {
+        sum += x;
+        count += 1;
+      }
+  return count ? { top, bottom, torsoX: sum / count } : null;
+}
+
+/**
+ * Lines every pose up on the idle pose's torso so the body does not slide
+ * between frames, and stands the idle and walk poses on one baseline. Then
+ * appends a passing pose (legs together) built from the second walk frame's
+ * upper body over the idle legs, since the sheets only draw wide strides.
+ */
+export function alignWalkPoses(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+  frameCount: number,
+): { pixels: Uint8ClampedArray; width: number } {
+  const cells = Array.from({ length: frameCount }, (_, index) =>
+    proportionalFrameBounds(width, frameCount, index),
+  );
+  const measures = cells.map((cell) =>
+    measurePose(pixels, width, height, cell.x, cell.width),
+  );
+  const reference = measures[0];
+  const strideCell = cells[3];
+  if (!reference || !strideCell || measures.some((pose) => !pose))
+    return { pixels, width };
+  const outputWidth = width + strideCell.width;
+  const output = new Uint8ClampedArray(outputWidth * height * 4);
+  const copy = (
+    fromCell: { x: number; width: number },
+    toX: number,
+    dx: number,
+    dy: number,
+    rows: (y: number) => boolean,
+  ) => {
+    for (let y = 0; y < height; y += 1) {
+      const targetY = y + dy;
+      if (targetY < 0 || targetY >= height || !rows(targetY)) continue;
+      for (let x = 0; x < fromCell.width; x += 1) {
+        const targetX = x + dx;
+        if (targetX < 0 || targetX >= fromCell.width) continue;
+        const from = (y * width + fromCell.x + x) * 4;
+        if ((pixels[from + 3] ?? 0) === 0) continue;
+        const to = (targetY * outputWidth + toX + targetX) * 4;
+        output.set(pixels.subarray(from, from + 4), to);
+      }
+    }
+  };
+  // Idle and walk poses share the idle baseline; jump and attack poses keep
+  // their own height and are only lined up sideways.
+  const offset = (index: number) => {
+    const pose = measures[index]!;
+    return {
+      dx: Math.round(reference.torsoX - pose.torsoX),
+      dy: index <= 4 ? reference.bottom - pose.bottom : 0,
+    };
+  };
+  cells.forEach((cell, index) => {
+    const { dx, dy } = offset(index);
+    copy(cell, cell.x, dx, dy, () => true);
+  });
+  // Passing pose: the stride's upper body down to the hips, idle legs below.
+  const stride = measures[3]!;
+  const strideShift = offset(3);
+  const hipY =
+    stride.top +
+    strideShift.dy +
+    Math.round((stride.bottom - stride.top) * 0.6);
+  const idleCell = cells[0]!;
+  copy(idleCell, width, 0, 0, (y) => y >= hipY);
+  copy(strideCell, width, strideShift.dx, strideShift.dy, (y) => y < hipY);
+  return { pixels: output, width: outputWidth };
 }
 
 export function proportionalFrameBounds(

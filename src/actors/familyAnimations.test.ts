@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  alignWalkPoses,
   packOpaquePoses,
   proportionalFrameBounds,
   removeSmallOpaqueComponents,
@@ -57,5 +58,53 @@ describe('illustrated sprite cleanup', () => {
         (_, index) => index % 4 === 3 && (packed.pixels[index] ?? 0) > 0,
       ),
     ).toHaveLength(19);
+  });
+
+  it('lines poses up on the idle torso and builds a passing pose', () => {
+    const cell = 20;
+    const frames = 8;
+    const width = cell * frames;
+    const height = 40;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    const paint = (x: number, y: number, red: number) => {
+      const offset = (y * width + x) * 4;
+      pixels[offset] = red;
+      pixels[offset + 3] = 255;
+    };
+    // Each pose: a 4-wide torso over a pair of legs, drawn at its own x and
+    // baseline. The red channel marks which frame a pixel came from.
+    for (let frame = 0; frame < frames; frame += 1) {
+      const left = frame * cell + 6 + (frame % 3);
+      const feet = 35 - (frame === 3 ? 2 : 0);
+      for (let y = 5; y <= feet; y += 1)
+        for (let x = 0; x < 4; x += 1) paint(left + x, y, 10 + frame);
+    }
+
+    const aligned = alignWalkPoses(pixels, width, height, frames);
+    const opaqueColumns = (cellIndex: number, y: number) =>
+      Array.from({ length: cell }, (_, x) => x).filter(
+        (x) =>
+          (aligned.pixels[(y * aligned.width + cellIndex * cell + x) * 4 + 3] ??
+            0) > 0,
+      );
+    const lowestRow = (cellIndex: number) => {
+      for (let y = height - 1; y >= 0; y -= 1)
+        if (opaqueColumns(cellIndex, y).length) return y;
+      return -1;
+    };
+    const redAt = (cellIndex: number, y: number) => {
+      const x = opaqueColumns(cellIndex, y)[0] ?? 0;
+      return aligned.pixels[(y * aligned.width + cellIndex * cell + x) * 4];
+    };
+
+    expect(aligned.width).toBe(width + cell);
+    // Walk frames sit on the idle torso and the idle baseline.
+    [2, 3, 4].forEach((frame) => {
+      expect(opaqueColumns(frame, 10)).toEqual(opaqueColumns(0, 10));
+      expect(lowestRow(frame)).toBe(lowestRow(0));
+    });
+    // The passing pose: stride upper body, idle legs.
+    expect(redAt(frames, 8)).toBe(13);
+    expect(redAt(frames, 34)).toBe(10);
   });
 });
