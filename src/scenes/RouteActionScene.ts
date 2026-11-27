@@ -836,18 +836,25 @@ export class RouteActionScene extends Phaser.Scene {
       this.player.play(playerVisual(this.save.activeTeamId).attack, true);
     const startX = this.player.x + this.facing * 14;
     const endX = this.player.x + this.facing * 58;
+    // The sprite's centre sits at chest height, above ground creatures, so the
+    // swing covers the whole body: from the feet to just above the head.
+    const body = this.player.body;
+    const swingTop = body.top - 6;
+    const swingBottom = body.bottom;
+    const strikeY = swingTop + (swingBottom - swingTop) * 0.62;
+    this.drawSwing(swingTop, swingBottom);
     const lanes = this.blessing === 'buckshot' ? [-12, 0, 12] : [0];
     const hitEnemies = new Set<ActionEnemy>();
     lanes.forEach((offsetY) => {
       const burst = this.add
-        .rectangle(startX, this.player!.y - 2 + offsetY, 12, 6, 0xffe47a, 0.95)
+        .rectangle(startX, strikeY + offsetY, 12, 6, 0xffe47a, 0.95)
         .setStrokeStyle(1, 0xffffff)
         .setDepth(15)
         .setAngle(this.facing * offsetY * 0.7);
       this.tweens.add({
         targets: burst,
         x: endX,
-        y: this.player!.y - 2 + offsetY * 1.7,
+        y: strikeY + offsetY * 1.7,
         scaleX: 0.35,
         alpha: 0,
         duration: 145,
@@ -856,9 +863,9 @@ export class RouteActionScene extends Phaser.Scene {
       });
       const bounds = new Phaser.Geom.Rectangle(
         Math.min(startX, endX) - 7,
-        this.player!.y - 11 + offsetY,
+        swingTop + offsetY,
         Math.abs(endX - startX) + 14,
-        18,
+        swingBottom - swingTop,
       );
       const enemy = this.enemies.find(
         (candidate) =>
@@ -887,6 +894,44 @@ export class RouteActionScene extends Phaser.Scene {
         }
         this.message?.setText('CREATURE CLEARED • KEEP MOVING!');
       }
+    });
+  }
+
+  /** A crescent sweeping from overhead down to the feet, in front of the player. */
+  private drawSwing(top: number, bottom: number): void {
+    if (!this.player) return;
+    const centreX = this.player.x + this.facing * 6;
+    const centreY = (top + bottom) / 2;
+    const radius = (bottom - top) / 2;
+    const start = this.facing > 0 ? -Math.PI * 0.42 : Math.PI * 1.42;
+    const end = this.facing > 0 ? Math.PI * 0.42 : Math.PI * 0.58;
+    const swing = this.add.graphics().setDepth(15);
+    const sweep = { t: 0 };
+    this.tweens.add({
+      targets: sweep,
+      t: 1,
+      duration: 150,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        const head = start + (end - start) * sweep.t;
+        swing
+          .clear()
+          .lineStyle(7, 0xffd24a, 0.6 * (1 - sweep.t * 0.5))
+          .beginPath()
+          .arc(centreX, centreY, radius + 6, start, head, this.facing < 0)
+          .strokePath()
+          .lineStyle(2, 0xffffff, 0.9 * (1 - sweep.t * 0.5))
+          .beginPath()
+          .arc(centreX, centreY, radius + 6, start, head, this.facing < 0)
+          .strokePath();
+      },
+      onComplete: () =>
+        this.tweens.add({
+          targets: swing,
+          alpha: 0,
+          duration: 90,
+          onComplete: () => swing.destroy(),
+        }),
     });
   }
 
